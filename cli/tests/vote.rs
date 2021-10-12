@@ -62,7 +62,7 @@ fn test_vote_authorize_and_withdraw() {
         .max(1);
     check_recent_balance(expected_balance, &rpc_client, &vote_account_pubkey);
 
-    // Transfer in some more NUB
+    // Transfer in some more GEMA
     config.signers = vec![&default_signer];
     config.command = CliCommand::Transfer {
         amount: SpendAmount::Some(1_000),

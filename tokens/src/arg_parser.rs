@@ -42,7 +42,7 @@ where
         )
         .subcommand(
             SubCommand::with_name("distribute-tokens")
-                .about("Distribute NUB")
+                .about("Distribute GEMA")
                 .arg(
                     Arg::with_name("db_path")
                         .long("db-path")
@@ -69,7 +69,7 @@ where
                         .takes_value(true)
                         .value_name("AMOUNT")
                         .validator(is_amount)
-                        .help("The amount to send to each recipient, in NUB"),
+                        .help("The amount to send to each recipient, in GEMA"),
                 )
                 .arg(
                     Arg::with_name("dry_run")
@@ -154,7 +154,7 @@ where
                         .long("unlocked-sol")
                         .takes_value(true)
                         .value_name("SOL_AMOUNT")
-                        .help("Amount of NUB to put in system account to pay for fees"),
+                        .help("Amount of GEMA to put in system account to pay for fees"),
                 )
                 .arg(
                     Arg::with_name("lockup_authority")
@@ -234,7 +234,7 @@ where
                         .long("unlocked-sol")
                         .takes_value(true)
                         .value_name("SOL_AMOUNT")
-                        .help("Amount of NUB to put in system account to pay for fees"),
+                        .help("Amount of GEMA to put in system account to pay for fees"),
                 )
                 .arg(
                     Arg::with_name("stake_authority")

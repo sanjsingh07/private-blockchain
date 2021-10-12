@@ -136,7 +136,7 @@ impl Faucet {
         if let Some((per_request_cap, per_time_cap)) = per_request_cap.zip(per_time_cap) {
             if per_time_cap < per_request_cap {
                 warn!(
-                    "per_time_cap {} NUB < per_request_cap {} NUB; \
+                    "per_time_cap {} GEMA < per_request_cap {} GEMA; \
                     maximum single requests will fail",
                     lamports_to_sol(per_time_cap),
                     lamports_to_sol(per_request_cap),
@@ -182,7 +182,7 @@ impl Faucet {
     /// Checks per-request and per-time-ip limits; if both pass, this method returns a signed
     /// SystemProgram::Transfer transaction from the faucet keypair to the requested recipient. If
     /// the request exceeds this per-request limit, this method returns a signed SPL Memo
-    /// transaction with the memo: "request too large; req: <REQUEST> NUB cap: <CAP> NUB"
+    /// transaction with the memo: "request too large; req: <REQUEST> GEMA cap: <CAP> GEMA"
     pub fn build_airdrop_transaction(
         &mut self,
         req: FaucetRequest,
@@ -197,7 +197,7 @@ impl Faucet {
             } => {
                 let mint_pubkey = self.faucet_keypair.pubkey();
                 info!(
-                    "Requesting airdrop of {} NUB to {:?}",
+                    "Requesting airdrop of {} GEMA to {:?}",
                     lamports_to_sol(lamports),
                     to
                 );
