@@ -6,7 +6,8 @@ use {
     },
     solana_core::validator::ValidatorStartProgress,
     solana_sdk::{
-        clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Sol,
+        // clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Sol,
+        clock::Slot, commitment_config::CommitmentConfig, exit::Exit, native_token::Nub,
         pubkey::Pubkey,
     },
     std::{
@@ -80,6 +81,8 @@ impl Dashboard {
             };
 
             let rpc_client = RpcClient::new_socket(rpc_addr);
+            println_name_value("rpc_addr info:", &rpc_addr.to_string());
+
             let identity = match rpc_client.get_identity() {
                 Ok(identity) => identity,
                 Err(err) => {
@@ -258,7 +261,7 @@ fn get_contact_info(rpc_client: &RpcClient, identity: &Pubkey) -> Option<RpcCont
 fn get_validator_stats(
     rpc_client: &RpcClient,
     identity: &Pubkey,
-) -> client_error::Result<(Slot, Slot, Slot, Slot, u64, Sol, String)> {
+) -> client_error::Result<(Slot, Slot, Slot, Slot, u64, Nub, String)> {
     let finalized_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::finalized())?;
     let confirmed_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::confirmed())?;
     let processed_slot = rpc_client.get_slot_with_commitment(CommitmentConfig::processed())?;
@@ -296,7 +299,7 @@ fn get_validator_stats(
         confirmed_slot,
         finalized_slot,
         transaction_count,
-        Sol(identity_balance),
+        Nub(identity_balance),
         health,
     ))
 }

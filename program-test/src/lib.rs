@@ -862,7 +862,7 @@ impl ProgramTest {
     /// Start the test client
     ///
     /// Returns a `BanksClient` interface into the test environment as well as a payer `Keypair`
-    /// with SOL for sending transactions
+    /// with NUB for sending transactions
     pub async fn start_with_context(self) -> ProgramTestContext {
         let (bank_forks, block_commitment_cache, last_blockhash, gci) = self.setup_bank();
         let transport =

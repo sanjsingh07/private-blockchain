@@ -273,10 +273,10 @@ fn main() {
             Arg::with_name("faucet_sol")
                 .long("faucet-sol")
                 .takes_value(true)
-                .value_name("SOL")
+                .value_name("NUB")
                 .default_value(default_faucet_sol.as_str())
                 .help(
-                    "Give the faucet address this much SOL in genesis. \
+                    "Give the faucet address this much NUB in genesis. \
                      If the ledger already exists then this parameter is silently ignored",
                 ),
         )
@@ -499,7 +499,7 @@ fn main() {
     } else if random_mint {
         println_name_value(
             "\nNotice!",
-            "No wallet available. `solana airdrop` localnet SOL after creating one\n",
+            "No wallet available. `solana airdrop` localnet NUB after creating one\n",
         );
     }
 

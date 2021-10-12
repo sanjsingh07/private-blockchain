@@ -39,7 +39,8 @@ use solana_sdk::{
     instruction::InstructionError,
     loader_instruction,
     message::Message,
-    native_token::Sol,
+    // native_token::Sol,
+    native_token::Nub,
     packet::PACKET_DATA_SIZE,
     process_instruction::MockInvokeContext,
     pubkey::Pubkey,
@@ -176,7 +177,7 @@ impl ProgramSubCommands for App<'_, '_> {
                             Arg::with_name("allow_excessive_balance")
                                 .long("allow-excessive-deploy-account-balance")
                                 .takes_value(false)
-                                .help("Use the designated program id even if the account already holds a large balance of SOL")
+                                .help("Use the designated program id even if the account already holds a large balance of NUB")
                         ),
                 )
                 .subcommand(
@@ -320,7 +321,7 @@ impl ProgramSubCommands for App<'_, '_> {
                             Arg::with_name("lamports")
                                 .long("lamports")
                                 .takes_value(false)
-                                .help("Display balance in lamports instead of SOL"),
+                                .help("Display balance in lamports instead of NUB"),
                         ),
                 )
                 .subcommand(
@@ -380,7 +381,7 @@ impl ProgramSubCommands for App<'_, '_> {
                             Arg::with_name("lamports")
                                 .long("lamports")
                                 .takes_value(false)
-                                .help("Display balance in lamports instead of SOL"),
+                                .help("Display balance in lamports instead of NUB"),
                         ),
                 )
         )
@@ -414,7 +415,7 @@ impl ProgramSubCommands for App<'_, '_> {
                     Arg::with_name("allow_excessive_balance")
                         .long("allow-excessive-deploy-account-balance")
                         .takes_value(false)
-                        .help("Use the designated program id, even if the account already holds a large balance of SOL")
+                        .help("Use the designated program id, even if the account already holds a large balance of NUB")
                 ),
         )
     }
@@ -2052,7 +2053,9 @@ fn complete_partial_program_init(
     {
         return Err(format!(
             "Buffer account has a balance: {:?}; it may already be in use",
-            Sol(account.lamports)
+            // Sol(account.lamports)
+            Nub(account.lamports)
+
         )
         .into());
     }

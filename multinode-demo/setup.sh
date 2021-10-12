@@ -35,19 +35,19 @@ fi
 args=(
   "$@"
   --max-genesis-archive-unpacked-size 1073741824
-  --enable-warmup-epochs
+  # --enable-warmup-epochs
   --bootstrap-validator "$SOLANA_CONFIG_DIR"/bootstrap-validator/identity.json
                         "$SOLANA_CONFIG_DIR"/bootstrap-validator/vote-account.json
                         "$SOLANA_CONFIG_DIR"/bootstrap-validator/stake-account.json
 )
 
-"$SOLANA_ROOT"/fetch-spl.sh
-if [[ -r spl-genesis-args.sh ]]; then
-  SPL_GENESIS_ARGS=$(cat "$SOLANA_ROOT"/spl-genesis-args.sh)
-  #shellcheck disable=SC2207
-  #shellcheck disable=SC2206
-  args+=($SPL_GENESIS_ARGS)
-fi
+# "$SOLANA_ROOT"/fetch-spl.sh
+# if [[ -r spl-genesis-args.sh ]]; then
+#   SPL_GENESIS_ARGS=$(cat "$SOLANA_ROOT"/spl-genesis-args.sh)
+#   #shellcheck disable=SC2207
+#   #shellcheck disable=SC2206
+#   args+=($SPL_GENESIS_ARGS)
+# fi
 
 default_arg --ledger "$SOLANA_CONFIG_DIR"/bootstrap-validator
 default_arg --faucet-pubkey "$SOLANA_CONFIG_DIR"/faucet.json
