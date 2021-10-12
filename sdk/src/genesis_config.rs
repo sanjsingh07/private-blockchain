@@ -10,7 +10,7 @@ use crate::{
     fee_calculator::FeeRateGovernor,
     hash::{hash, Hash},
     inflation::Inflation,
-    native_token::lamports_to_sol,
+    native_token::lamports_to_gema,
     poh_config::PohConfig,
     pubkey::Pubkey,
     rent::Rent,
@@ -273,7 +273,7 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_sol(
+            lamports_to_gema(
                 self.accounts
                     .iter()
                     .map(|(pubkey, account)| {

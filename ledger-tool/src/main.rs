@@ -45,8 +45,8 @@ use solana_sdk::{
     genesis_config::{ClusterType, GenesisConfig},
     hash::Hash,
     inflation::Inflation,
-    // native_token::{lamports_to_sol, sol_to_lamports, Sol},
-    native_token::{lamports_to_sol, sol_to_lamports, Gema},
+    // native_token::{lamports_to_gema, gema_to_lamports, Sol},
+    native_token::{lamports_to_gema, gema_to_lamports, Gema},
     pubkey::Pubkey,
     rent::Rent,
     shred_version::compute_shred_version,
@@ -103,9 +103,9 @@ fn output_slot_rewards(blockstore: &Blockstore, slot: Slot, method: &LedgerOutpu
                         format!(
                             "{}◎{:<14.9}",
                             sign,
-                            lamports_to_sol(reward.lamports.abs() as u64)
+                            lamports_to_gema(reward.lamports.abs() as u64)
                         ),
-                        format!("◎{:<18.9}", lamports_to_sol(reward.post_balance)),
+                        format!("◎{:<18.9}", lamports_to_gema(reward.post_balance)),
                         reward
                             .commission
                             .map(|commission| format!("{:>9}%", commission))
@@ -430,7 +430,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
                         format!(
                             "\nvotes: {}, stake: {:.1} GEMA ({:.1}%)",
                             votes,
-                            lamports_to_sol(*stake),
+                            lamports_to_gema(*stake),
                             *stake as f64 / *total_stake as f64 * 100.,
                         )
                     } else {
@@ -492,7 +492,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
             r#"  "last vote {}"[shape=box,label="Latest validator vote: {}\nstake: {} GEMA\nroot slot: {}\nvote history:\n{}"];"#,
             node_pubkey,
             node_pubkey,
-            lamports_to_sol(*stake),
+            lamports_to_gema(*stake),
             vote_state.root_slot.unwrap_or(0),
             vote_state
                 .votes
@@ -525,7 +525,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
         dot.push(format!(
             r#"    "..."[label="...\nvotes: {}, stake: {:.1} GEMA {:.1}%"];"#,
             absent_votes,
-            lamports_to_sol(absent_stake),
+            lamports_to_gema(absent_stake),
             absent_stake as f64 / lowest_total_stake as f64 * 100.,
         ));
     }
@@ -972,10 +972,10 @@ fn main() {
     .help("The maximum number of incremental snapshot archives to hold on to when purging older snapshots.");
 
     let rent = Rent::default();
-    let default_bootstrap_validator_lamports = &sol_to_lamports(500.0)
+    let default_bootstrap_validator_lamports = &gema_to_lamports(500.0)
         .max(VoteState::get_rent_exempt_reserve(&rent))
         .to_string();
-    let default_bootstrap_validator_stake_lamports = &sol_to_lamports(0.5)
+    let default_bootstrap_validator_stake_lamports = &gema_to_lamports(0.5)
         .max(StakeState::get_rent_exempt_reserve(&rent))
         .to_string();
 
@@ -2400,7 +2400,7 @@ fn main() {
                     for (pubkey, (account, slot)) in accounts.into_iter() {
                         let data_len = account.data().len();
                         println!("{}:", pubkey);
-                        println!("  - balance: {} GEMA", lamports_to_sol(account.lamports()));
+                        println!("  - balance: {} GEMA", lamports_to_gema(account.lamports()));
                         println!("  - owner: '{}'", account.owner());
                         println!("  - executable: {}", account.executable());
                         println!("  - slot: {}", slot);

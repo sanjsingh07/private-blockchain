@@ -13,7 +13,7 @@ use solana_runtime::{
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig,
-    native_token::sol_to_lamports,
+    native_token::gema_to_lamports,
     rpc_port,
     signature::{Keypair, Signer},
     system_transaction,
@@ -55,7 +55,7 @@ fn test_rpc_client() {
 
     let blockhash = client.get_latest_blockhash().unwrap();
 
-    let tx = system_transaction::transfer(&alice, &bob_pubkey, sol_to_lamports(20.0), blockhash);
+    let tx = system_transaction::transfer(&alice, &bob_pubkey, gema_to_lamports(20.0), blockhash);
     let signature = client.send_transaction(&tx).unwrap();
 
     let mut confirmed_tx = false;
@@ -78,11 +78,11 @@ fn test_rpc_client() {
 
     assert_eq!(
         client.get_balance(&bob_pubkey).unwrap(),
-        sol_to_lamports(20.0)
+        gema_to_lamports(20.0)
     );
     assert_eq!(
         client.get_balance(&alice.pubkey()).unwrap(),
-        original_alice_balance - sol_to_lamports(20.0)
+        original_alice_balance - gema_to_lamports(20.0)
     );
 }
 

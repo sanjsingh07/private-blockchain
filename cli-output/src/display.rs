@@ -4,7 +4,7 @@ use {
     console::style,
     indicatif::{ProgressBar, ProgressStyle},
     solana_sdk::{
-        clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_sol,
+        clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_gema,
         program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     solana_transaction_status::UiTransactionStatusMeta,
@@ -42,7 +42,7 @@ pub fn build_balance_message_with_config(
     let value = if config.use_lamports_unit {
         lamports.to_string()
     } else {
-        let sol = lamports_to_sol(lamports);
+        let sol = lamports_to_gema(lamports);
         let sol_str = format!("{:.9}", sol);
         if config.trim_trailing_zeros {
             sol_str
@@ -285,7 +285,7 @@ pub fn write_transaction<W: io::Write>(
             w,
             "{}  Fee: ◎{}",
             prefix,
-            lamports_to_sol(transaction_status.fee)
+            lamports_to_gema(transaction_status.fee)
         )?;
         assert_eq!(
             transaction_status.pre_balances.len(),
@@ -303,7 +303,7 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{}",
                     prefix,
                     i,
-                    lamports_to_sol(*pre)
+                    lamports_to_gema(*pre)
                 )?;
             } else {
                 writeln!(
@@ -311,8 +311,8 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{} -> ◎{}",
                     prefix,
                     i,
-                    lamports_to_sol(*pre),
-                    lamports_to_sol(*post)
+                    lamports_to_gema(*pre),
+                    lamports_to_gema(*post)
                 )?;
             }
         }
@@ -349,9 +349,9 @@ pub fn write_transaction<W: io::Write>(
                         format!(
                             "{}◎{:<14.9}",
                             sign,
-                            lamports_to_sol(reward.lamports.abs() as u64)
+                            lamports_to_gema(reward.lamports.abs() as u64)
                         ),
-                        format!("◎{:<18.9}", lamports_to_sol(reward.post_balance),)
+                        format!("◎{:<18.9}", lamports_to_gema(reward.post_balance),)
                     )?;
                 }
             }

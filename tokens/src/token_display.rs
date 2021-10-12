@@ -1,5 +1,5 @@
 use solana_account_decoder::parse_token::real_number_string_trimmed;
-use solana_sdk::native_token::lamports_to_sol;
+use solana_sdk::native_token::lamports_to_gema;
 use std::{
     fmt::{Debug, Display, Formatter, Result},
     ops::Add,
@@ -23,7 +23,7 @@ impl Token {
     fn write_with_symbol(&self, f: &mut Formatter) -> Result {
         match &self.token_type {
             TokenType::Gema => {
-                let amount = lamports_to_sol(self.amount);
+                let amount = lamports_to_gema(self.amount);
                 write!(f, "{}{}", GEMA_SYMBOL, amount)
             }
             TokenType::SplToken => {

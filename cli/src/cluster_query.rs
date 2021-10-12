@@ -40,7 +40,7 @@ use solana_sdk::{
     epoch_schedule::Epoch,
     hash::Hash,
     message::Message,
-    native_token::lamports_to_sol,
+    native_token::lamports_to_gema,
     nonce::State as NonceState,
     pubkey::{self, Pubkey},
     rent::Rent,
@@ -1345,7 +1345,7 @@ pub fn process_supply(
 
 pub fn process_total_supply(rpc_client: &RpcClient, _config: &CliConfig) -> ProcessResult {
     let supply = rpc_client.supply()?.value;
-    Ok(format!("{} GEMA", lamports_to_sol(supply.total)))
+    Ok(format!("{} GEMA", lamports_to_gema(supply.total)))
 }
 
 pub fn process_get_transaction_count(rpc_client: &RpcClient, _config: &CliConfig) -> ProcessResult {

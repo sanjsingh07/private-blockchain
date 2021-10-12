@@ -20,7 +20,7 @@ use solana_client::{rpc_client::RpcClient, rpc_config::RpcGetVoteAccountsConfig}
 use solana_remote_wallet::remote_wallet::RemoteWalletManager;
 use solana_sdk::{
     account::Account, commitment_config::CommitmentConfig, message::Message,
-    native_token::lamports_to_sol, pubkey::Pubkey, system_instruction::SystemError,
+    native_token::lamports_to_gema, pubkey::Pubkey, system_instruction::SystemError,
     transaction::Transaction,
 };
 use solana_vote_program::{
@@ -958,7 +958,7 @@ pub fn process_withdraw_from_vote_account(
         SpendAmount::Some(withdraw_amount) => {
             if current_balance.saturating_sub(withdraw_amount) < minimum_balance {
                 return Err(CliError::BadParameter(format!(
-                    "Withdraw amount too large. The vote account balance must be at least {} GEMA to remain rent exempt", lamports_to_sol(minimum_balance)
+                    "Withdraw amount too large. The vote account balance must be at least {} GEMA to remain rent exempt", lamports_to_gema(minimum_balance)
                 ))
                 .into());
             }

@@ -94,7 +94,7 @@ use solana_sdk::{
     lamports::LamportsError,
     message::SanitizedMessage,
     native_loader,
-    native_token::sol_to_lamports,
+    native_token::gema_to_lamports,
     nonce, nonce_account,
     packet::PACKET_DATA_SIZE,
     process_instruction::{ComputeMeter, Executor, ProcessInstructionWithContext},
@@ -5644,7 +5644,7 @@ impl Bank {
             let mut native_mint_account = solana_sdk::account::AccountSharedData::from(Account {
                 owner: inline_spl_token_v2_0::id(),
                 data: inline_spl_token_v2_0::native_mint::ACCOUNT_DATA.to_vec(),
-                lamports: sol_to_lamports(1.),
+                lamports: gema_to_lamports(1.),
                 executable: false,
                 rent_epoch: self.epoch() + 1,
             });
@@ -13888,11 +13888,11 @@ pub(crate) mod tests {
             .iter()
             .cloned()
             .zip(vec![
-                sol_to_lamports(2.0),
-                sol_to_lamports(3.0),
-                sol_to_lamports(3.0),
-                sol_to_lamports(4.0),
-                sol_to_lamports(5.0),
+                gema_to_lamports(2.0),
+                gema_to_lamports(3.0),
+                gema_to_lamports(3.0),
+                gema_to_lamports(4.0),
+                gema_to_lamports(5.0),
             ])
             .collect();
 
@@ -13918,17 +13918,17 @@ pub(crate) mod tests {
         assert_eq!(
             bank.get_largest_accounts(1, &pubkeys_hashset, AccountAddressFilter::Include)
                 .unwrap(),
-            vec![(pubkeys[4], sol_to_lamports(5.0))]
+            vec![(pubkeys[4], gema_to_lamports(5.0))]
         );
         assert_eq!(
             bank.get_largest_accounts(1, &HashSet::new(), AccountAddressFilter::Exclude)
                 .unwrap(),
-            vec![(pubkeys[4], sol_to_lamports(5.0))]
+            vec![(pubkeys[4], gema_to_lamports(5.0))]
         );
         assert_eq!(
             bank.get_largest_accounts(1, &exclude4, AccountAddressFilter::Exclude)
                 .unwrap(),
-            vec![(pubkeys[3], sol_to_lamports(4.0))]
+            vec![(pubkeys[3], gema_to_lamports(4.0))]
         );
 
         // Return all added accounts

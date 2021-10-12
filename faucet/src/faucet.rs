@@ -14,7 +14,7 @@ use {
         hash::Hash,
         instruction::Instruction,
         message::Message,
-        native_token::lamports_to_sol,
+        native_token::lamports_to_gema,
         packet::PACKET_DATA_SIZE,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
@@ -138,8 +138,8 @@ impl Faucet {
                 warn!(
                     "per_time_cap {} GEMA < per_request_cap {} GEMA; \
                     maximum single requests will fail",
-                    lamports_to_sol(per_time_cap),
-                    lamports_to_sol(per_request_cap),
+                    lamports_to_gema(per_time_cap),
+                    lamports_to_gema(per_request_cap),
                 );
             }
         }
@@ -164,10 +164,10 @@ impl Faucet {
         if let Some(cap) = self.per_time_cap {
             if new_total > cap {
                 return Err(FaucetError::PerTimeCapExceeded(
-                    lamports_to_sol(request_amount),
+                    lamports_to_gema(request_amount),
                     to.to_string(),
-                    lamports_to_sol(new_total),
-                    lamports_to_sol(cap),
+                    lamports_to_gema(new_total),
+                    lamports_to_gema(cap),
                 ));
             }
         }
@@ -198,7 +198,7 @@ impl Faucet {
                 let mint_pubkey = self.faucet_keypair.pubkey();
                 info!(
                     "Requesting airdrop of {} GEMA to {:?}",
-                    lamports_to_sol(lamports),
+                    lamports_to_gema(lamports),
                     to
                 );
 
@@ -207,8 +207,8 @@ impl Faucet {
                         let memo = format!(
                             "{}",
                             FaucetError::PerRequestCapExceeded(
-                                lamports_to_sol(lamports),
-                                lamports_to_sol(cap),
+                                lamports_to_gema(lamports),
+                                lamports_to_gema(cap),
                             )
                         );
                         let memo_instruction = Instruction {

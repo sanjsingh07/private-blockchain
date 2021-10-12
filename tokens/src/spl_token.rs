@@ -8,7 +8,7 @@ use solana_account_decoder::parse_token::{
     spl_token_v2_0_pubkey,
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{instruction::Instruction, message::Message, native_token::lamports_to_sol};
+use solana_sdk::{instruction::Instruction, message::Message, native_token::lamports_to_gema};
 use solana_transaction_status::parse_token::spl_token_v2_0_instruction;
 use spl_associated_token_account_v1_0::{
     create_associated_token_account, get_associated_token_address,
@@ -113,7 +113,7 @@ pub fn check_spl_token_balances(
     if fee_payer_balance < fees + account_creation_amount {
         return Err(Error::InsufficientFunds(
             vec![FundingSource::FeePayer].into(),
-            lamports_to_sol(fees + account_creation_amount).to_string(),
+            lamports_to_gema(fees + account_creation_amount).to_string(),
         ));
     }
     let source_token_account = client

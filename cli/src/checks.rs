@@ -5,7 +5,7 @@ use solana_client::{
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig, hash::Hash, message::Message,
-    native_token::lamports_to_sol, pubkey::Pubkey,
+    native_token::lamports_to_gema, pubkey::Pubkey,
 };
 
 pub fn check_account_for_fee(
@@ -84,13 +84,13 @@ pub fn check_account_for_spend_multiple_fees_with_commitment(
     {
         if balance > 0 {
             return Err(CliError::InsufficientFundsForSpendAndFee(
-                lamports_to_sol(balance),
-                lamports_to_sol(fee),
+                lamports_to_gema(balance),
+                lamports_to_gema(fee),
                 *account_pubkey,
             ));
         } else {
             return Err(CliError::InsufficientFundsForFee(
-                lamports_to_sol(fee),
+                lamports_to_gema(fee),
                 *account_pubkey,
             ));
         }
