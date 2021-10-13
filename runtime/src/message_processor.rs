@@ -936,7 +936,7 @@ mod tests {
             result,
             Err(TransactionError::InstructionError(
                 0,
-                InstructionError::ReadonlyLamportChange
+                InstructionError::ReadonlyCaratChange
             ))
         );
 

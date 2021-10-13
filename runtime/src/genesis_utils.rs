@@ -16,7 +16,7 @@ use solana_vote_program::vote_state;
 use std::borrow::Borrow;
 
 // Default amount received by the validator
-const VALIDATOR_LAMPORTS: u64 = 42;
+const VALIDATOR_CARATS: u64 = 42;
 
 // fun fact: rustc is very close to make this const fn.
 pub fn bootstrap_validator_stake_carats() -> u64 {
@@ -90,7 +90,7 @@ pub fn create_genesis_config_with_vote_accounts_and_cluster_type(
         &voting_keypairs[0].borrow().vote_keypair.pubkey(),
         &voting_keypairs[0].borrow().stake_keypair.pubkey(),
         stakes[0],
-        VALIDATOR_LAMPORTS,
+        VALIDATOR_CARATS,
         FeeRateGovernor::new(0, 0), // most tests can't handle transaction fees
         Rent::free(),               // most tests don't expect rent
         cluster_type,
@@ -109,7 +109,7 @@ pub fn create_genesis_config_with_vote_accounts_and_cluster_type(
         let stake_pubkey = validator_voting_keypairs.borrow().stake_keypair.pubkey();
 
         // Create accounts
-        let node_account = Account::new(VALIDATOR_LAMPORTS, 0, &system_program::id());
+        let node_account = Account::new(VALIDATOR_CARATS, 0, &system_program::id());
         let vote_account = vote_state::create_account(&vote_pubkey, &node_pubkey, 0, *stake);
         let stake_account = Account::from(stake_state::create_account(
             &stake_pubkey,
@@ -147,7 +147,7 @@ pub fn create_genesis_config_with_leader(
         &voting_keypair.pubkey(),
         &solana_sdk::pubkey::new_rand(),
         validator_stake_carats,
-        VALIDATOR_LAMPORTS,
+        VALIDATOR_CARATS,
         FeeRateGovernor::new(0, 0), // most tests can't handle transaction fees
         Rent::free(),               // most tests don't expect rent
         ClusterType::Development,

@@ -301,7 +301,7 @@ where
     }
 
     let balance = client.get_balance(&id.pubkey()).unwrap_or(0);
-    metrics_submit_lamport_balance(balance);
+    metrics_submit_carat_balance(balance);
 
     compute_and_report_stats(
         &maxes,
@@ -314,11 +314,11 @@ where
     r_maxes.first().unwrap().1.txs
 }
 
-fn metrics_submit_lamport_balance(lamport_balance: u64) {
-    info!("Token balance: {}", lamport_balance);
+fn metrics_submit_carat_balance(carat_balance: u64) {
+    info!("Token balance: {}", carat_balance);
     datapoint_info!(
-        "bench-tps-lamport_balance",
-        ("balance", lamport_balance, i64)
+        "bench-tps-carat_balance",
+        ("balance", carat_balance, i64)
     );
 }
 
@@ -420,7 +420,7 @@ fn poll_blockhash<T: Client>(
 
         if blockhash_updated {
             let balance = client.get_balance(id).unwrap_or(0);
-            metrics_submit_lamport_balance(balance);
+            metrics_submit_carat_balance(balance);
         }
 
         if exit_signal.load(Ordering::Relaxed) {
@@ -718,7 +718,7 @@ pub fn airdrop_carats<T: Client>(
     desired_balance: u64,
 ) -> Result<()> {
     let starting_balance = client.get_balance(&id.pubkey()).unwrap_or(0);
-    metrics_submit_lamport_balance(starting_balance);
+    metrics_submit_carat_balance(starting_balance);
     info!("starting balance {}", starting_balance);
 
     if starting_balance < desired_balance {
@@ -766,7 +766,7 @@ pub fn airdrop_carats<T: Client>(
             });
         info!("current balance {}...", current_balance);
 
-        metrics_submit_lamport_balance(current_balance);
+        metrics_submit_carat_balance(current_balance);
         if current_balance - starting_balance != airdrop_amount {
             info!(
                 "Airdrop failed! {} {} {}",
@@ -874,7 +874,7 @@ pub fn generate_and_fund_keypairs<T: 'static + Client + Send + Sync>(
     let (mut keypairs, extra) = generate_keypairs(funding_key, keypair_count as u64);
     info!("Get carats...");
 
-    // Sample the first keypair, to prevent lamport loss on repeated solana-bench-tps executions
+    // Sample the first keypair, to prevent carat loss on repeated solana-bench-tps executions
     let first_key = keypairs[0].pubkey();
     let first_keypair_balance = client.get_balance(&first_key).unwrap_or(0);
 

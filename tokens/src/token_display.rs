@@ -33,7 +33,7 @@ impl Token {
         }
     }
 
-    pub fn sol(amount: u64) -> Self {
+    pub fn gema(amount: u64) -> Self {
         Self {
             amount,
             decimals: 9,

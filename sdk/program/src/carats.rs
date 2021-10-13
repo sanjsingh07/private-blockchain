@@ -2,7 +2,7 @@ use crate::instruction::InstructionError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum LamportsError {
+pub enum CaratsError {
     /// arithmetic underflowed
     #[error("Arithmetic underflowed")]
     ArithmeticUnderflow,
@@ -12,11 +12,11 @@ pub enum LamportsError {
     ArithmeticOverflow,
 }
 
-impl From<LamportsError> for InstructionError {
-    fn from(error: LamportsError) -> Self {
+impl From<CaratsError> for InstructionError {
+    fn from(error: CaratsError) -> Self {
         match error {
-            LamportsError::ArithmeticOverflow => InstructionError::ArithmeticOverflow,
-            LamportsError::ArithmeticUnderflow => InstructionError::ArithmeticOverflow,
+            CaratsError::ArithmeticOverflow => InstructionError::ArithmeticOverflow,
+            CaratsError::ArithmeticUnderflow => InstructionError::ArithmeticOverflow,
         }
     }
 }

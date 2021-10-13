@@ -62,7 +62,7 @@ pub enum InstructionError {
     #[error("instruction requires an initialized account")]
     UninitializedAccount,
 
-    /// Program's instruction lamport balance does not equal the balance after the instruction
+    /// Program's instruction carat balance does not equal the balance after the instruction
     #[error("sum of account balances before and after instruction do not match")]
     UnbalancedInstruction,
 
@@ -72,7 +72,7 @@ pub enum InstructionError {
 
     /// Program spent the carats of an account that doesn't belong to it
     #[error("instruction spent from the balance of an account it does not own")]
-    ExternalAccountLamportSpend,
+    ExternalAccountCaratSpend,
 
     /// Program modified the data of an account that doesn't belong to it
     #[error("instruction modified data of an account it does not own")]
@@ -80,7 +80,7 @@ pub enum InstructionError {
 
     /// Read-only account's carats modified
     #[error("instruction changed the balance of a read-only account")]
-    ReadonlyLamportChange,
+    ReadonlyCaratChange,
 
     /// Read-only account's data was modified
     #[error("instruction modified data of a read-only account")]
@@ -142,7 +142,7 @@ pub enum InstructionError {
 
     /// Executable account's carats modified
     #[error("instruction changed the balance of a executable account")]
-    ExecutableLamportChange,
+    ExecutableCaratChange,
 
     /// Executable accounts must be rent exempt
     #[error("executable accounts must be rent exempt")]

@@ -485,9 +485,9 @@ impl TryFrom<tx_by_addr::TransactionError> for TransactionError {
                     9 => InstructionError::UninitializedAccount,
                     10 => InstructionError::UnbalancedInstruction,
                     11 => InstructionError::ModifiedProgramId,
-                    12 => InstructionError::ExternalAccountLamportSpend,
+                    12 => InstructionError::ExternalAccountCaratSpend,
                     13 => InstructionError::ExternalAccountDataModified,
-                    14 => InstructionError::ReadonlyLamportChange,
+                    14 => InstructionError::ReadonlyCaratChange,
                     15 => InstructionError::ReadonlyDataModified,
                     16 => InstructionError::DuplicateAccountIndex,
                     17 => InstructionError::ExecutableModified,
@@ -500,7 +500,7 @@ impl TryFrom<tx_by_addr::TransactionError> for TransactionError {
                     24 => InstructionError::DuplicateAccountOutOfSync,
                     26 => InstructionError::InvalidError,
                     27 => InstructionError::ExecutableDataModified,
-                    28 => InstructionError::ExecutableLamportChange,
+                    28 => InstructionError::ExecutableCaratChange,
                     29 => InstructionError::ExecutableAccountNotRentExempt,
                     30 => InstructionError::UnsupportedProgramId,
                     31 => InstructionError::CallDepth,
@@ -660,14 +660,14 @@ impl From<TransactionError> for tx_by_addr::TransactionError {
                             InstructionError::ModifiedProgramId => {
                                 tx_by_addr::InstructionErrorType::ModifiedProgramId
                             }
-                            InstructionError::ExternalAccountLamportSpend => {
-                                tx_by_addr::InstructionErrorType::ExternalAccountLamportSpend
+                            InstructionError::ExternalAccountCaratSpend => {
+                                tx_by_addr::InstructionErrorType::ExternalAccountCaratSpend
                             }
                             InstructionError::ExternalAccountDataModified => {
                                 tx_by_addr::InstructionErrorType::ExternalAccountDataModified
                             }
-                            InstructionError::ReadonlyLamportChange => {
-                                tx_by_addr::InstructionErrorType::ReadonlyLamportChange
+                            InstructionError::ReadonlyCaratChange => {
+                                tx_by_addr::InstructionErrorType::ReadonlyCaratChange
                             }
                             InstructionError::ReadonlyDataModified => {
                                 tx_by_addr::InstructionErrorType::ReadonlyDataModified
@@ -706,8 +706,8 @@ impl From<TransactionError> for tx_by_addr::TransactionError {
                             InstructionError::ExecutableDataModified => {
                                 tx_by_addr::InstructionErrorType::ExecutableDataModified
                             }
-                            InstructionError::ExecutableLamportChange => {
-                                tx_by_addr::InstructionErrorType::ExecutableLamportChange
+                            InstructionError::ExecutableCaratChange => {
+                                tx_by_addr::InstructionErrorType::ExecutableCaratChange
                             }
                             InstructionError::ExecutableAccountNotRentExempt => {
                                 tx_by_addr::InstructionErrorType::ExecutableAccountNotRentExempt
@@ -1147,7 +1147,7 @@ mod test {
         );
 
         let transaction_error =
-            TransactionError::InstructionError(10, InstructionError::ExecutableLamportChange);
+            TransactionError::InstructionError(10, InstructionError::ExecutableCaratChange);
         let tx_by_addr_transaction_error: tx_by_addr::TransactionError =
             transaction_error.clone().into();
         assert_eq!(
@@ -1174,7 +1174,7 @@ mod test {
         );
 
         let transaction_error =
-            TransactionError::InstructionError(10, InstructionError::ExternalAccountLamportSpend);
+            TransactionError::InstructionError(10, InstructionError::ExternalAccountCaratSpend);
         let tx_by_addr_transaction_error: tx_by_addr::TransactionError =
             transaction_error.clone().into();
         assert_eq!(
@@ -1373,7 +1373,7 @@ mod test {
         );
 
         let transaction_error =
-            TransactionError::InstructionError(10, InstructionError::ReadonlyLamportChange);
+            TransactionError::InstructionError(10, InstructionError::ReadonlyCaratChange);
         let tx_by_addr_transaction_error: tx_by_addr::TransactionError =
             transaction_error.clone().into();
         assert_eq!(

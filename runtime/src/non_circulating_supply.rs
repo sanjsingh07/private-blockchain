@@ -39,7 +39,7 @@ pub fn calculate_non_circulating_supply(bank: &Arc<Bank>) -> ScanResult<NonCircu
             &IndexKey::ProgramId(stake::program::id()),
             // The program-id account index checks for Account owner on inclusion. However, due to
             // the current AccountsDb implementation, an account may remain in storage as a
-            // zero-lamport Account::Default() after being wiped and reinitialized in later
+            // zero-carat Account::Default() after being wiped and reinitialized in later
             // updates. We include the redundant filter here to avoid returning these accounts.
             |account| account.owner() == &stake::program::id(),
         )?

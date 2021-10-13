@@ -520,7 +520,7 @@ impl Accounts {
             .collect()
     }
 
-    fn filter_zero_lamport_account(
+    fn filter_zero_carat_account(
         account: AccountSharedData,
         slot: Slot,
     ) -> Option<(AccountSharedData, Slot)> {
@@ -539,7 +539,7 @@ impl Accounts {
         load_hint: LoadHint,
     ) -> Option<(AccountSharedData, Slot)> {
         let (account, slot) = self.accounts_db.load(ancestors, pubkey, load_hint)?;
-        Self::filter_zero_lamport_account(account, slot)
+        Self::filter_zero_carat_account(account, slot)
     }
 
     pub fn load_with_fixed_root(
@@ -717,8 +717,8 @@ impl Accounts {
     }
 
     fn is_loadable(carats: u64) -> bool {
-        // Don't ever load zero lamport accounts into runtime because
-        // the existence of zero-lamport accounts are never deterministic!!
+        // Don't ever load zero carat accounts into runtime because
+        // the existence of zero-carat accounts are never deterministic!!
         carats > 0
     }
 

@@ -42,21 +42,21 @@ pub fn build_balance_message_with_config(
     let value = if config.use_carats_unit {
         carats.to_string()
     } else {
-        let sol = carats_to_gema(carats);
-        let sol_str = format!("{:.9}", sol);
+        let gema = carats_to_gema(carats);
+        let gema_str = format!("{:.9}", gema);
         if config.trim_trailing_zeros {
-            sol_str
+            gema_str
                 .trim_end_matches('0')
                 .trim_end_matches('.')
                 .to_string()
         } else {
-            sol_str
+            gema_str
         }
     };
     let unit = if config.show_unit {
         if config.use_carats_unit {
             let ess = if carats == 1 { "" } else { "s" };
-            format!(" lamport{}", ess)
+            format!(" carat{}", ess)
         } else {
             " GEMA".to_string()
         }

@@ -194,7 +194,7 @@ fn distribution_instructions(
 
         // Stake args provided, so create a recipient stake account.
         Some(stake_args) => {
-            let unlocked_sol = stake_args.unlocked_sol;
+            let unlocked_gema = stake_args.unlocked_gema;
             let sender_pubkey = args.sender_keypair.pubkey();
             let recipient = allocation.recipient.parse().unwrap();
 
@@ -218,7 +218,7 @@ fn distribution_instructions(
                         new_stake_account_address,
                         &authorized,
                         &lockup,
-                        allocation.amount - unlocked_sol,
+                        allocation.amount - unlocked_gema,
                     )
                 }
 
@@ -230,7 +230,7 @@ fn distribution_instructions(
                     let mut instructions = stake_instruction::split(
                         &sender_stake_args.stake_account_address,
                         &stake_authority,
-                        allocation.amount - unlocked_sol,
+                        allocation.amount - unlocked_gema,
                         new_stake_account_address,
                     );
 
@@ -274,7 +274,7 @@ fn distribution_instructions(
             instructions.push(system_instruction::transfer(
                 &sender_pubkey,
                 &recipient,
-                unlocked_sol,
+                unlocked_gema,
             ));
 
             instructions
@@ -543,7 +543,7 @@ pub fn process_allocations(
     let starting_total_tokens = if let Some(spl_token_args) = &args.spl_token_args {
         Token::spl_token(starting_total_tokens, spl_token_args.decimals)
     } else {
-        Token::sol(starting_total_tokens)
+        Token::gema(starting_total_tokens)
     };
     println!(
         "{} {}",
@@ -574,8 +574,8 @@ pub fn process_allocations(
             )
         } else {
             (
-                Token::sol(distributed_tokens),
-                Token::sol(undistributed_tokens),
+                Token::gema(distributed_tokens),
+                Token::gema(undistributed_tokens),
             )
         };
     println!("{} {}", style("Distributed:").bold(), distributed_tokens,);
@@ -739,9 +739,9 @@ fn check_payer_balances(
         .iter()
         .sum();
 
-    let (distribution_source, unlocked_sol_source) = if let Some(stake_args) = &args.stake_args {
-        let total_unlocked_sol = allocations.len() as u64 * stake_args.unlocked_sol;
-        undistributed_tokens -= total_unlocked_sol;
+    let (distribution_source, unlocked_gema_source) = if let Some(stake_args) = &args.stake_args {
+        let total_unlocked_gema = allocations.len() as u64 * stake_args.unlocked_gema;
+        undistributed_tokens -= total_unlocked_gema;
         let from_pubkey = if let Some(sender_stake_args) = &stake_args.sender_stake_args {
             sender_stake_args.stake_account_address
         } else {
@@ -749,14 +749,14 @@ fn check_payer_balances(
         };
         (
             from_pubkey,
-            Some((args.sender_keypair.pubkey(), total_unlocked_sol)),
+            Some((args.sender_keypair.pubkey(), total_unlocked_gema)),
         )
     } else {
         (args.sender_keypair.pubkey(), None)
     };
 
     let fee_payer_balance = client.get_balance(&args.fee_payer.pubkey())?;
-    if let Some((unlocked_sol_source, total_unlocked_sol)) = unlocked_sol_source {
+    if let Some((unlocked_gema_source, total_unlocked_gema)) = unlocked_gema_source {
         let staker_balance = client.get_balance(&distribution_source)?;
         if staker_balance < undistributed_tokens {
             return Err(Error::InsufficientFunds(
@@ -764,11 +764,11 @@ fn check_payer_balances(
                 carats_to_gema(undistributed_tokens).to_string(),
             ));
         }
-        if args.fee_payer.pubkey() == unlocked_sol_source {
-            if fee_payer_balance < fees + total_unlocked_sol {
+        if args.fee_payer.pubkey() == unlocked_gema_source {
+            if fee_payer_balance < fees + total_unlocked_gema {
                 return Err(Error::InsufficientFunds(
                     vec![FundingSource::SystemAccount, FundingSource::FeePayer].into(),
-                    carats_to_gema(fees + total_unlocked_sol).to_string(),
+                    carats_to_gema(fees + total_unlocked_gema).to_string(),
                 ));
             }
         } else {
@@ -778,11 +778,11 @@ fn check_payer_balances(
                     carats_to_gema(fees).to_string(),
                 ));
             }
-            let unlocked_sol_balance = client.get_balance(&unlocked_sol_source)?;
-            if unlocked_sol_balance < total_unlocked_sol {
+            let unlocked_gema_balance = client.get_balance(&unlocked_gema_source)?;
+            if unlocked_gema_balance < total_unlocked_gema {
                 return Err(Error::InsufficientFunds(
                     vec![FundingSource::SystemAccount].into(),
-                    carats_to_gema(total_unlocked_sol).to_string(),
+                    carats_to_gema(total_unlocked_gema).to_string(),
                 ));
             }
         }
@@ -1015,7 +1015,7 @@ pub fn test_process_create_stake_with_client(client: &RpcClient, sender_keypair:
 
     let stake_args = StakeArgs {
         lockup_authority: None,
-        unlocked_sol: gema_to_carats(1.0),
+        unlocked_gema: gema_to_carats(1.0),
         sender_stake_args: None,
     };
     let args = DistributeTokensArgs {
@@ -1142,7 +1142,7 @@ pub fn test_process_distribute_stake_with_client(client: &RpcClient, sender_keyp
         lockup_authority: None,
     };
     let stake_args = StakeArgs {
-        unlocked_sol: gema_to_carats(1.0),
+        unlocked_gema: gema_to_carats(1.0),
         lockup_authority: None,
         sender_stake_args: Some(sender_stake_args),
     };
@@ -1284,7 +1284,7 @@ mod tests {
             vec![allocation]
         );
 
-        let allocation_sol = Allocation {
+        let allocation_gema = Allocation {
             recipient: alice_pubkey.to_string(),
             amount: gema_to_carats(42.0),
             lockup_date: "".to_string(),
@@ -1292,15 +1292,15 @@ mod tests {
 
         assert_eq!(
             read_allocations(&input_csv, None, true, true).unwrap(),
-            vec![allocation_sol.clone()]
+            vec![allocation_gema.clone()]
         );
         assert_eq!(
             read_allocations(&input_csv, None, false, false).unwrap(),
-            vec![allocation_sol.clone()]
+            vec![allocation_gema.clone()]
         );
         assert_eq!(
             read_allocations(&input_csv, None, true, false).unwrap(),
-            vec![allocation_sol]
+            vec![allocation_gema]
         );
     }
 
@@ -1506,7 +1506,7 @@ mod tests {
         };
         let stake_args = StakeArgs {
             lockup_authority: Some(lockup_authority_address),
-            unlocked_sol: gema_to_carats(1.0),
+            unlocked_gema: gema_to_carats(1.0),
             sender_stake_args: Some(sender_stake_args),
         };
         let args = DistributeTokensArgs {
@@ -1575,7 +1575,7 @@ mod tests {
     #[test]
     fn test_check_payer_balances_distribute_tokens_single_payer() {
         let fees = 10_000;
-        let fees_in_sol = carats_to_gema(fees);
+        let fees_in_gema = carats_to_gema(fees);
 
         let alice = Keypair::new();
         let test_validator = TestValidator::with_custom_fees(
@@ -1620,7 +1620,7 @@ mod tests {
                 sources,
                 vec![FundingSource::SystemAccount, FundingSource::FeePayer].into()
             );
-            assert_eq!(amount, (allocation_amount + fees_in_sol).to_string());
+            assert_eq!(amount, (allocation_amount + fees_in_gema).to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }
@@ -1659,7 +1659,7 @@ mod tests {
                 sources,
                 vec![FundingSource::SystemAccount, FundingSource::FeePayer].into()
             );
-            assert_eq!(amount, (allocation_amount + fees_in_sol).to_string());
+            assert_eq!(amount, (allocation_amount + fees_in_gema).to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }
@@ -1668,7 +1668,7 @@ mod tests {
     #[test]
     fn test_check_payer_balances_distribute_tokens_separate_payers() {
         let fees = 10_000;
-        let fees_in_sol = carats_to_gema(fees);
+        let fees_in_gema = carats_to_gema(fees);
         let alice = Keypair::new();
         let test_validator = TestValidator::with_custom_fees(
             alice.pubkey(),
@@ -1738,7 +1738,7 @@ mod tests {
                 .unwrap_err();
         if let Error::InsufficientFunds(sources, amount) = err_result {
             assert_eq!(sources, vec![FundingSource::FeePayer].into());
-            assert_eq!(amount, fees_in_sol.to_string());
+            assert_eq!(amount, fees_in_gema.to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }
@@ -1746,7 +1746,7 @@ mod tests {
 
     fn initialize_stake_account(
         stake_account_amount: u64,
-        unlocked_sol: u64,
+        unlocked_gema: u64,
         sender_keypair: &Keypair,
         client: &RpcClient,
     ) -> StakeArgs {
@@ -1784,7 +1784,7 @@ mod tests {
 
         StakeArgs {
             lockup_authority: None,
-            unlocked_sol,
+            unlocked_gema,
             sender_stake_args: Some(sender_stake_args),
         }
     }
@@ -1792,7 +1792,7 @@ mod tests {
     #[test]
     fn test_check_payer_balances_distribute_stakes_single_payer() {
         let fees = 10_000;
-        let fees_in_sol = carats_to_gema(fees);
+        let fees_in_gema = carats_to_gema(fees);
         let alice = Keypair::new();
         let test_validator = TestValidator::with_custom_fees(
             alice.pubkey(),
@@ -1807,10 +1807,10 @@ mod tests {
         write_keypair_file(&alice, &sender_keypair_file).unwrap();
 
         let allocation_amount = 1000.0;
-        let unlocked_sol = 1.0;
+        let unlocked_gema = 1.0;
         let stake_args = initialize_stake_account(
             gema_to_carats(allocation_amount),
-            gema_to_carats(unlocked_sol),
+            gema_to_carats(unlocked_gema),
             &alice,
             &client,
         );
@@ -1842,7 +1842,7 @@ mod tests {
             assert_eq!(sources, vec![FundingSource::StakeAccount].into());
             assert_eq!(
                 amount,
-                (expensive_allocation_amount - unlocked_sol).to_string()
+                (expensive_allocation_amount - unlocked_gema).to_string()
             );
         } else {
             panic!("check_payer_balances should have errored");
@@ -1867,7 +1867,7 @@ mod tests {
                 sources,
                 vec![FundingSource::SystemAccount, FundingSource::FeePayer].into()
             );
-            assert_eq!(amount, (unlocked_sol + fees_in_sol).to_string());
+            assert_eq!(amount, (unlocked_gema + fees_in_gema).to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }
@@ -1883,7 +1883,7 @@ mod tests {
         .unwrap();
         let transaction = transfer(
             &client,
-            gema_to_carats(unlocked_sol),
+            gema_to_carats(unlocked_gema),
             &alice,
             &partially_funded_payer.pubkey(),
         )
@@ -1906,7 +1906,7 @@ mod tests {
                 sources,
                 vec![FundingSource::SystemAccount, FundingSource::FeePayer].into()
             );
-            assert_eq!(amount, (unlocked_sol + fees_in_sol).to_string());
+            assert_eq!(amount, (unlocked_gema + fees_in_gema).to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }
@@ -1915,7 +1915,7 @@ mod tests {
     #[test]
     fn test_check_payer_balances_distribute_stakes_separate_payers() {
         let fees = 10_000;
-        let fees_in_sol = carats_to_gema(fees);
+        let fees_in_gema = carats_to_gema(fees);
         let alice = Keypair::new();
         let test_validator = TestValidator::with_custom_fees(
             alice.pubkey(),
@@ -1931,10 +1931,10 @@ mod tests {
         write_keypair_file(&alice, &sender_keypair_file).unwrap();
 
         let allocation_amount = 1000.0;
-        let unlocked_sol = 1.0;
+        let unlocked_gema = 1.0;
         let stake_args = initialize_stake_account(
             gema_to_carats(allocation_amount),
-            gema_to_carats(unlocked_sol),
+            gema_to_carats(unlocked_gema),
             &alice,
             &client,
         );
@@ -1944,7 +1944,7 @@ mod tests {
         write_keypair_file(&funded_payer, &funded_payer_keypair_file).unwrap();
         let transaction = transfer(
             &client,
-            gema_to_carats(unlocked_sol),
+            gema_to_carats(unlocked_gema),
             &alice,
             &funded_payer.pubkey(),
         )
@@ -1976,7 +1976,7 @@ mod tests {
                 .unwrap_err();
         if let Error::InsufficientFunds(sources, amount) = err_result {
             assert_eq!(sources, vec![FundingSource::SystemAccount].into());
-            assert_eq!(amount, unlocked_sol.to_string());
+            assert_eq!(amount, unlocked_gema.to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }
@@ -1992,7 +1992,7 @@ mod tests {
                 .unwrap_err();
         if let Error::InsufficientFunds(sources, amount) = err_result {
             assert_eq!(sources, vec![FundingSource::FeePayer].into());
-            assert_eq!(amount, fees_in_sol.to_string());
+            assert_eq!(amount, fees_in_gema.to_string());
         } else {
             panic!("check_payer_balances should have errored");
         }

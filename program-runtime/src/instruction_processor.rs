@@ -136,17 +136,17 @@ impl PreAccount {
         if program_id != pre.owner() // line coverage used to get branch coverage
          && pre.carats() > post.carats()
         {
-            return Err(InstructionError::ExternalAccountLamportSpend);
+            return Err(InstructionError::ExternalAccountCaratSpend);
         }
 
         // The balance of read-only and executable accounts may not change
         let carats_changed = pre.carats() != post.carats();
         if carats_changed {
             if !is_writable {
-                return Err(InstructionError::ReadonlyLamportChange);
+                return Err(InstructionError::ReadonlyCaratChange);
             }
             if pre.executable() {
-                return Err(InstructionError::ExecutableLamportChange);
+                return Err(InstructionError::ExecutableCaratChange);
             }
         }
 
@@ -839,7 +839,7 @@ mod tests {
                 .executable(true, true)
                 .carats(1, 2)
                 .verify(),
-            Err(InstructionError::ExecutableLamportChange),
+            Err(InstructionError::ExecutableCaratChange),
             "owner should not be able to add carats once marked executable"
         );
         assert_eq!(
@@ -847,7 +847,7 @@ mod tests {
                 .executable(true, true)
                 .carats(1, 2)
                 .verify(),
-            Err(InstructionError::ExecutableLamportChange),
+            Err(InstructionError::ExecutableCaratChange),
             "owner should not be able to add carats once marked executable"
         );
         assert_eq!(
@@ -855,7 +855,7 @@ mod tests {
                 .executable(true, true)
                 .carats(2, 1)
                 .verify(),
-            Err(InstructionError::ExecutableLamportChange),
+            Err(InstructionError::ExecutableCaratChange),
             "owner should not be able to subtract carats once marked executable"
         );
         let data = vec![1; 100];
@@ -972,7 +972,7 @@ mod tests {
                 .carats(42, 0)
                 .read_only()
                 .verify(),
-            Err(InstructionError::ExternalAccountLamportSpend),
+            Err(InstructionError::ExternalAccountCaratSpend),
             "debit should fail, even if system program"
         );
         assert_eq!(
@@ -980,7 +980,7 @@ mod tests {
                 .carats(42, 0)
                 .read_only()
                 .verify(),
-            Err(InstructionError::ReadonlyLamportChange),
+            Err(InstructionError::ReadonlyCaratChange),
             "debit should fail, even if owning program"
         );
         assert_eq!(

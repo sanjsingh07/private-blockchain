@@ -307,7 +307,7 @@ pub fn parse_airdrop(
     } else {
         vec![default_signer.signer_from_path(matches, wallet_manager)?]
     };
-    let carats = carats_of_sol(matches, "amount").unwrap();
+    let carats = carats_of_gema(matches, "amount").unwrap();
     Ok(CliCommandInfo {
         command: CliCommand::Airdrop { pubkey, carats },
         signers,

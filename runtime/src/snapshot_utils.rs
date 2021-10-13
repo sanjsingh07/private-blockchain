@@ -2916,7 +2916,7 @@ mod tests {
         assert_eq!(deserialized_bank, *bank4);
     }
 
-    /// Test that cleaning works well in the edge cases of zero-lamport accounts and snapshots.
+    /// Test that cleaning works well in the edge cases of zero-carat accounts and snapshots.
     /// Here's the scenario:
     ///
     /// slot 1:
@@ -2939,7 +2939,7 @@ mod tests {
     /// information about Account1, but the full snapshost _does_ have info for Account1, which is
     /// no longer correct!
     #[test]
-    fn test_incremental_snapshots_handle_zero_lamport_accounts() {
+    fn test_incremental_snapshots_handle_zero_carat_accounts() {
         solana_logger::setup();
 
         let collector = Pubkey::new_unique();

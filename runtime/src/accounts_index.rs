@@ -62,13 +62,13 @@ pub type AccountMap<V> = Arc<InMemAccountsIndex<V>>;
 pub(crate) type AccountMapEntry<T> = Arc<AccountMapEntryInner<T>>;
 
 pub trait IsCached:
-    'static + Clone + Debug + PartialEq + ZeroLamport + Copy + Default + Sync + Send
+    'static + Clone + Debug + PartialEq + ZeroCarat + Copy + Default + Sync + Send
 {
     fn is_cached(&self) -> bool;
 }
 
 pub trait IndexValue:
-    'static + IsCached + Clone + Debug + PartialEq + ZeroLamport + Copy + Default + Sync + Send
+    'static + IsCached + Clone + Debug + PartialEq + ZeroCarat + Copy + Default + Sync + Send
 {
 }
 
@@ -748,8 +748,8 @@ impl<'a, T: IndexValue> Iterator for AccountsIndexIterator<'a, T> {
     }
 }
 
-pub trait ZeroLamport {
-    fn is_zero_lamport(&self) -> bool;
+pub trait ZeroCarat {
+    fn is_zero_carat(&self) -> bool;
 }
 
 type MapType<T> = AccountMap<T>;
@@ -1493,10 +1493,10 @@ impl<T: IndexValue> AccountsIndex<T> {
         //
         // Skipping means not updating secondary index to mark the account as missing.
         // This doesn't introduce false positives during a scan because the caller to scan
-        // provides the ancestors to check. So even if a zero-lamport account is not yet
+        // provides the ancestors to check. So even if a zero-carat account is not yet
         // removed from the secondary index, the scan function will:
         // 1) consult the primary index via `get(&pubkey, Some(ancestors), max_root)`
-        // and find the zero-lamport version
+        // and find the zero-carat version
         // 2) When the fetch from storage occurs, it will return AccountSharedData::Default
         // (as persisted tombstone for snapshots). This will then ultimately be
         // filtered out by post-scan filters, like in `get_filtered_spl_token_accounts_by_owner()`.
@@ -1578,8 +1578,8 @@ impl<T: IndexValue> AccountsIndex<T> {
                 let pubkey_bin = self.bin_calculator.bin_from_pubkey(&pubkey);
                 let binned_index = (pubkey_bin + random_offset) % bins;
                 // this value is equivalent to what update() below would have created if we inserted a new item
-                let is_zero_lamport = account_info.is_zero_lamport();
-                let result = if is_zero_lamport { Some(pubkey) } else { None };
+                let is_zero_carat = account_info.is_zero_carat();
+                let result = if is_zero_carat { Some(pubkey) } else { None };
 
                 let info =
                     PreAllocatedAccountMapEntry::new(slot, account_info, &self.storage.storage);
@@ -1602,7 +1602,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                 let already_exists =
                     w_account_maps.insert_new_entry_if_missing_with_lock(pubkey, new_item);
                 if let Some((account_entry, account_info, pubkey)) = already_exists {
-                    let is_zero_lamport = account_info.is_zero_lamport();
+                    let is_zero_carat = account_info.is_zero_carat();
                     InMemAccountsIndex::lock_and_update_slot_list(
                         &account_entry,
                         (slot, account_info),
@@ -1610,7 +1610,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                         false,
                     );
 
-                    if !is_zero_lamport {
+                    if !is_zero_carat {
                         // zero carats were already added to dirty_pubkeys above
                         dirty_pubkeys.push(pubkey);
                     }
@@ -2757,8 +2757,8 @@ pub mod tests {
         }
     }
 
-    impl ZeroLamport for AccountInfoTest {
-        fn is_zero_lamport(&self) -> bool {
+    impl ZeroCarat for AccountInfoTest {
+        fn is_zero_carat(&self) -> bool {
             true
         }
     }
@@ -4088,14 +4088,14 @@ pub mod tests {
             false
         }
     }
-    impl ZeroLamport for bool {
-        fn is_zero_lamport(&self) -> bool {
+    impl ZeroCarat for bool {
+        fn is_zero_carat(&self) -> bool {
             false
         }
     }
 
-    impl ZeroLamport for u64 {
-        fn is_zero_lamport(&self) -> bool {
+    impl ZeroCarat for u64 {
+        fn is_zero_carat(&self) -> bool {
             false
         }
     }

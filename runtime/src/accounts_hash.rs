@@ -7,7 +7,7 @@ use solana_sdk::{
 };
 use std::{convert::TryInto, sync::Mutex};
 
-pub const ZERO_RAW_LAMPORTS_SENTINEL: u64 = std::u64::MAX;
+pub const ZERO_RAW_CARATS_SENTINEL: u64 = std::u64::MAX;
 pub const MERKLE_FANOUT: usize = 16;
 
 #[derive(Default, Debug)]
@@ -508,7 +508,7 @@ impl AccountsHash {
         stats: &mut HashStats,
         max_bin: usize,
     ) -> (Vec<Vec<Hash>>, u64) {
-        // 1. eliminate zero lamport accounts
+        // 1. eliminate zero carat accounts
         // 2. pick the highest slot or (slot = and highest version) of each pubkey
         // 3. produce this output:
         // a. vec: PUBKEY_BINS_FOR_CALCULATING_HASHES in pubkey order
@@ -585,14 +585,14 @@ impl AccountsHash {
         )
     }
 
-    // go through: [..][pubkey_bin][..] and return hashes and lamport sum
+    // go through: [..][pubkey_bin][..] and return hashes and carat sum
     //   slot groups^                ^accounts found in a slot group, sorted by pubkey, higher slot, write_version
-    // 1. eliminate zero lamport accounts
+    // 1. eliminate zero carat accounts
     // 2. pick the highest slot or (slot = and highest version) of each pubkey
     // 3. produce this output:
     //   a. vec: individual hashes in pubkey order
-    //   b. lamport sum
-    //   c. unreduced count (ie. including duplicates and zero lamport)
+    //   b. carat sum
+    //   c. unreduced count (ie. including duplicates and zero carat)
     fn de_dup_accounts_in_parallel(
         pubkey_division: &[Vec<Vec<CalculateHashIntermediate>>],
         pubkey_bin: usize,
@@ -658,7 +658,7 @@ impl AccountsHash {
                 pubkey_division,
                 &mut indexes,
             );
-            if item.carats != ZERO_RAW_LAMPORTS_SENTINEL {
+            if item.carats != ZERO_RAW_CARATS_SENTINEL {
                 overall_sum = Self::checked_cast_for_capitalization(
                     item.carats as u128 + overall_sum as u128,
                 );
@@ -820,7 +820,7 @@ pub mod tests {
         // 2nd key - zero carats, so will be removed
         let key = Pubkey::new(&[12u8; 32]);
         let hash = Hash::new(&[2u8; 32]);
-        let val = CalculateHashIntermediate::new(hash, ZERO_RAW_LAMPORTS_SENTINEL, key);
+        let val = CalculateHashIntermediate::new(hash, ZERO_RAW_CARATS_SENTINEL, key);
         account_maps.push(val);
 
         let result = AccountsHash::rest_of_hash_calculation(
@@ -893,7 +893,7 @@ pub mod tests {
             // 2nd key - zero carats, so will be removed
             let key = Pubkey::new(&[12u8; 32]);
             let hash = Hash::new(&[2u8; 32]);
-            let val = CalculateHashIntermediate::new(hash, ZERO_RAW_LAMPORTS_SENTINEL, key);
+            let val = CalculateHashIntermediate::new(hash, ZERO_RAW_CARATS_SENTINEL, key);
             account_maps.push(val);
 
             let mut previous_pass = PreviousPass::default();
@@ -1430,7 +1430,7 @@ pub mod tests {
         assert_eq!(result, (vec![val.hash], val.carats as u64, 1));
 
         // zero original carats, higher version
-        let val = CalculateHashIntermediate::new(hash, ZERO_RAW_LAMPORTS_SENTINEL, key);
+        let val = CalculateHashIntermediate::new(hash, ZERO_RAW_CARATS_SENTINEL, key);
         account_maps.push(val); // has to be after previous entry since account_maps are in slot order
 
         let result = test_de_dup_accounts_in_parallel(&account_maps[..]);
@@ -1791,7 +1791,7 @@ pub mod tests {
 
     #[test]
     #[should_panic(expected = "overflow is detected while summing capitalization")]
-    fn test_accountsdb_lamport_overflow() {
+    fn test_accountsdb_carat_overflow() {
         solana_logger::setup();
 
         let offset = 2;
@@ -1808,7 +1808,7 @@ pub mod tests {
 
     #[test]
     #[should_panic(expected = "overflow is detected while summing capitalization")]
-    fn test_accountsdb_lamport_overflow2() {
+    fn test_accountsdb_carat_overflow2() {
         solana_logger::setup();
 
         let offset = 2;

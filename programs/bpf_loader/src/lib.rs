@@ -1011,7 +1011,7 @@ mod tests {
         instruction::{AccountMeta, InstructionError},
         keyed_account::KeyedAccount,
         message::Message,
-        native_token::LAMPORTS_PER_GEMA,
+        native_token::CARATS_PER_GEMA,
         process_instruction::{MockComputeMeter, MockInvokeContext},
         pubkey::Pubkey,
         rent::Rent,
@@ -1723,7 +1723,7 @@ mod tests {
         );
 
         // Test successful deploy
-        let payer_base_balance = LAMPORTS_PER_GEMA;
+        let payer_base_balance = CARATS_PER_GEMA;
         let deploy_fees = {
             let fee_calculator = genesis_config.fee_rate_governor.create_fee_calculator();
             3 * fee_calculator.carats_per_signature

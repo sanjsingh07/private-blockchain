@@ -7,7 +7,7 @@ use solana_sdk::{
 };
 use std::{net::SocketAddr, process::exit, time::Duration};
 
-const NUM_LAMPORTS_PER_ACCOUNT_DEFAULT: u64 = solana_sdk::native_token::LAMPORTS_PER_GEMA;
+const NUM_CARATS_PER_ACCOUNT_DEFAULT: u64 = solana_sdk::native_token::CARATS_PER_GEMA;
 
 /// Holds the configuration for a single run of the benchmark
 pub struct Config {
@@ -49,7 +49,7 @@ impl Default for Config {
             read_from_client_file: false,
             target_carats_per_signature: FeeRateGovernor::default().target_carats_per_signature,
             multi_client: true,
-            num_carats_per_account: NUM_LAMPORTS_PER_ACCOUNT_DEFAULT,
+            num_carats_per_account: NUM_CARATS_PER_ACCOUNT_DEFAULT,
             target_slots_per_epoch: 0,
             target_node: None,
         }
@@ -164,7 +164,7 @@ pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
         .arg(
             Arg::with_name("target_carats_per_signature")
                 .long("target-carats-per-signature")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .help(
                     "The cost in carats that the cluster will charge for signature \
@@ -174,7 +174,7 @@ pub fn build_args<'a, 'b>(version: &'b str) -> App<'a, 'b> {
         .arg(
             Arg::with_name("num_carats_per_account")
                 .long("num-carats-per-account")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .help(
                     "Number of carats per account.",

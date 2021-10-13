@@ -25,7 +25,7 @@ use crate::{
     accounts_index::{
         AccountIndexGetResult, AccountSecondaryIndexes, AccountsIndex, AccountsIndexConfig,
         AccountsIndexRootsStats, IndexKey, IndexValue, IsCached, RefCount, ScanResult, SlotList,
-        SlotSlice, ZeroLamport, ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS,
+        SlotSlice, ZeroCarat, ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS,
         ACCOUNTS_INDEX_CONFIG_FOR_TESTING,
     },
     ancestors::Ancestors,
@@ -283,8 +283,8 @@ impl IsCached for AccountInfo {
 
 impl IndexValue for AccountInfo {}
 
-impl ZeroLamport for AccountInfo {
-    fn is_zero_lamport(&self) -> bool {
+impl ZeroCarat for AccountInfo {
+    fn is_zero_carat(&self) -> bool {
         self.carats == 0
     }
 }
@@ -581,7 +581,7 @@ pub enum BankHashVerificationError {
     MismatchedAccountHash,
     MismatchedBankHash,
     MissingBankHash,
-    MismatchedTotalLamports(u64, u64),
+    MismatchedTotalCarats(u64, u64),
 }
 
 #[derive(Default)]
@@ -1030,13 +1030,13 @@ pub struct AccountsDb {
     shrink_ratio: AccountShrinkThreshold,
 
     /// Set of stores which are recently rooted or had accounts removed
-    /// such that potentially a 0-lamport account update could be present which
+    /// such that potentially a 0-carat account update could be present which
     /// means we can remove the account from the index entirely.
     dirty_stores: DashMap<(Slot, AppendVecId), Arc<AccountStorageEntry>>,
 
-    /// Zero-lamport accounts that are *not* purged during clean because they need to stay alive
+    /// Zero-carat accounts that are *not* purged during clean because they need to stay alive
     /// for incremental snapshot support.
-    zero_lamport_accounts_to_purge_after_full_snapshot: DashSet<(Slot, Pubkey)>,
+    zero_carat_accounts_to_purge_after_full_snapshot: DashSet<(Slot, Pubkey)>,
 }
 
 #[derive(Debug, Default)]
@@ -1503,7 +1503,7 @@ impl AccountsDb {
             remove_unrooted_slots_synchronization: RemoveUnrootedSlotsSynchronization::default(),
             shrink_ratio: AccountShrinkThreshold::default(),
             dirty_stores: DashMap::default(),
-            zero_lamport_accounts_to_purge_after_full_snapshot: DashSet::default(),
+            zero_carat_accounts_to_purge_after_full_snapshot: DashSet::default(),
         }
     }
 
@@ -1886,14 +1886,14 @@ impl AccountsDb {
         hashset_to_vec.stop();
         timings.hashset_to_vec_us += hashset_to_vec.as_us();
 
-        // Check if we should purge any of the zero_lamport_accounts_to_purge_later, based on the
+        // Check if we should purge any of the zero_carat_accounts_to_purge_later, based on the
         // last_full_snapshot_slot.
         assert!(
-            last_full_snapshot_slot.is_some() || self.zero_lamport_accounts_to_purge_after_full_snapshot.is_empty(),
-            "if snapshots are disabled, then zero_lamport_accounts_to_purge_later should always be empty"
+            last_full_snapshot_slot.is_some() || self.zero_carat_accounts_to_purge_after_full_snapshot.is_empty(),
+            "if snapshots are disabled, then zero_carat_accounts_to_purge_later should always be empty"
         );
         if let Some(last_full_snapshot_slot) = last_full_snapshot_slot {
-            self.zero_lamport_accounts_to_purge_after_full_snapshot
+            self.zero_carat_accounts_to_purge_after_full_snapshot
                 .retain(|(slot, pubkey)| {
                     let is_candidate_for_clean =
                         max_slot >= *slot && last_full_snapshot_slot >= *slot;
@@ -1907,7 +1907,7 @@ impl AccountsDb {
         pubkeys
     }
 
-    // Purge zero lamport accounts and older rooted account states as garbage
+    // Purge zero carat accounts and older rooted account states as garbage
     // collection
     // Only remove those accounts where the entire rooted history of the account
     // can be purged because there are no live append vecs in the ancestors
@@ -2071,7 +2071,7 @@ impl AccountsDb {
         calc_deps_time.stop();
 
         let mut purge_filter = Measure::start("purge_filter");
-        self.filter_zero_lamport_clean_for_incremental_snapshots(
+        self.filter_zero_carat_clean_for_incremental_snapshots(
             max_clean_root,
             last_full_snapshot_slot,
             &store_counts,
@@ -2205,10 +2205,10 @@ impl AccountsDb {
         }
     }
 
-    /// During clean, some zero-lamport accounts that are marked for purge should *not* actually
+    /// During clean, some zero-carat accounts that are marked for purge should *not* actually
     /// get purged.  Filter out those accounts here.
     ///
-    /// When using incremental snapshots, do not purge zero-lamport accounts if the slot is higher
+    /// When using incremental snapshots, do not purge zero-carat accounts if the slot is higher
     /// than the last full snapshot slot.  This is to protect against the following scenario:
     ///
     ///   ```text
@@ -2226,7 +2226,7 @@ impl AccountsDb {
     ///
     /// This filtering step can be skipped if there is no `last_full_snapshot_slot`, or if the
     /// `max_clean_root` is less-than-or-equal-to the `last_full_snapshot_slot`.
-    fn filter_zero_lamport_clean_for_incremental_snapshots(
+    fn filter_zero_carat_clean_for_incremental_snapshots(
         &self,
         max_clean_root: Option<Slot>,
         last_full_snapshot_slot: Option<Slot>,
@@ -2259,15 +2259,15 @@ impl AccountsDb {
                 .max_by_key(|(slot, _account_info)| slot);
 
             slot_account_info_at_highest_slot.map_or(true, |(slot, account_info)| {
-                // Do *not* purge zero-lamport accounts if the slot is greater than the last full
+                // Do *not* purge zero-carat accounts if the slot is greater than the last full
                 // snapshot slot.  Since we're `retain`ing the accounts-to-purge, I felt creating
                 // the `cannot_purge` variable made this easier to understand.  Accounts that do
                 // not get purged here are added to a list so they be considered for purging later
                 // (i.e. after the next full snapshot).
-                assert!(account_info.is_zero_lamport());
+                assert!(account_info.is_zero_carat());
                 let cannot_purge = *slot > last_full_snapshot_slot.unwrap();
                 if cannot_purge {
-                    self.zero_lamport_accounts_to_purge_after_full_snapshot
+                    self.zero_carat_accounts_to_purge_after_full_snapshot
                         .insert((*slot, *pubkey));
                 }
                 !cannot_purge
@@ -3249,8 +3249,8 @@ impl AccountsDb {
                             // after reading the index:
                             // 1) Shrink has removed the old storage entry and rewritten to
                             // a newer storage entry
-                            // 2) The `pubkey` asked for in this function is a zero-lamport account,
-                            // and the storage entry holding this account qualified for zero-lamport clean.
+                            // 2) The `pubkey` asked for in this function is a zero-carat account,
+                            // and the storage entry holding this account qualified for zero-carat clean.
                             //
                             // In both these cases, it should be safe to retry and recheck the accounts
                             // index indefinitely, without incrementing num_acceptable_failed_iterations.
@@ -5312,7 +5312,7 @@ impl AccountsDb {
                 let raw_carats = loaded_account.carats();
                 let zero_raw_carats = raw_carats == 0;
                 let balance = if zero_raw_carats {
-                    crate::accounts_hash::ZERO_RAW_LAMPORTS_SENTINEL
+                    crate::accounts_hash::ZERO_RAW_CARATS_SENTINEL
                 } else {
                     raw_carats
                 };
@@ -5469,7 +5469,7 @@ impl AccountsDb {
                 "Mismatched total carats: {} calculated: {}",
                 total_carats, calculated_carats
             );
-            return Err(MismatchedTotalLamports(calculated_carats, total_carats));
+            return Err(MismatchedTotalCarats(calculated_carats, total_carats));
         }
 
         let bank_hashes = self.bank_hashes.read().unwrap();
@@ -8186,14 +8186,14 @@ pub mod tests {
     }
 
     #[test]
-    fn test_clean_zero_lamport_and_dead_slot() {
+    fn test_clean_zero_carat_and_dead_slot() {
         solana_logger::setup();
 
         let accounts = AccountsDb::new(Vec::new(), &ClusterType::Development);
         let pubkey1 = solana_sdk::pubkey::new_rand();
         let pubkey2 = solana_sdk::pubkey::new_rand();
         let account = AccountSharedData::new(1, 1, AccountSharedData::default().owner());
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
 
         // Store two accounts
@@ -8202,7 +8202,7 @@ pub mod tests {
 
         // Make sure both accounts are in the same AppendVec in slot 0, which
         // will prevent pubkey1 from being cleaned up later even when it's a
-        // zero-lamport account
+        // zero-carat account
         let ancestors = vec![(0, 1)].into_iter().collect();
         let (slot1, account_info1) = accounts
             .accounts_index
@@ -8222,7 +8222,7 @@ pub mod tests {
         accounts.store_uncached(1, &[(&pubkey1, &account)]);
 
         // Update account 1 as  zero carats account
-        accounts.store_uncached(2, &[(&pubkey1, &zero_lamport_account)]);
+        accounts.store_uncached(2, &[(&pubkey1, &zero_carat_account)]);
 
         // Pubkey 1 was the only account in slot 1, and it was updated in slot 2, so
         // slot 1 should be purged
@@ -8243,20 +8243,20 @@ pub mod tests {
     }
 
     #[test]
-    fn test_clean_multiple_zero_lamport_decrements_index_ref_count() {
+    fn test_clean_multiple_zero_carat_decrements_index_ref_count() {
         solana_logger::setup();
 
         let accounts = AccountsDb::new(Vec::new(), &ClusterType::Development);
         let pubkey1 = solana_sdk::pubkey::new_rand();
         let pubkey2 = solana_sdk::pubkey::new_rand();
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
 
         // Store 2 accounts in slot 0, then update account 1 in two more slots
-        accounts.store_uncached(0, &[(&pubkey1, &zero_lamport_account)]);
-        accounts.store_uncached(0, &[(&pubkey2, &zero_lamport_account)]);
-        accounts.store_uncached(1, &[(&pubkey1, &zero_lamport_account)]);
-        accounts.store_uncached(2, &[(&pubkey1, &zero_lamport_account)]);
+        accounts.store_uncached(0, &[(&pubkey1, &zero_carat_account)]);
+        accounts.store_uncached(0, &[(&pubkey2, &zero_carat_account)]);
+        accounts.store_uncached(1, &[(&pubkey1, &zero_carat_account)]);
+        accounts.store_uncached(2, &[(&pubkey1, &zero_carat_account)]);
         // Root all slots
         accounts.add_root(0);
         accounts.add_root(1);
@@ -8272,7 +8272,7 @@ pub mod tests {
         // accounts are zero carats
         assert!(accounts.storage.get_slot_stores(0).is_none());
         assert!(accounts.storage.get_slot_stores(1).is_none());
-        // Slot 2 only has a zero lamport account as well. But, calc_delete_dependencies()
+        // Slot 2 only has a zero carat account as well. But, calc_delete_dependencies()
         // should exclude slot 2 from the clean due to changes in other slots
         assert!(accounts.storage.get_slot_stores(2).is_some());
         // Index ref counts should be consistent with the slot stores. Account 1 ref count
@@ -8288,26 +8288,26 @@ pub mod tests {
     }
 
     #[test]
-    fn test_clean_zero_lamport_and_old_roots() {
+    fn test_clean_zero_carat_and_old_roots() {
         solana_logger::setup();
 
         let accounts = AccountsDb::new(Vec::new(), &ClusterType::Development);
         let pubkey = solana_sdk::pubkey::new_rand();
         let account = AccountSharedData::new(1, 0, AccountSharedData::default().owner());
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
 
-        // Store a zero-lamport account
+        // Store a zero-carat account
         accounts.store_uncached(0, &[(&pubkey, &account)]);
-        accounts.store_uncached(1, &[(&pubkey, &zero_lamport_account)]);
+        accounts.store_uncached(1, &[(&pubkey, &zero_carat_account)]);
 
-        // Simulate rooting the zero-lamport account, should be a
+        // Simulate rooting the zero-carat account, should be a
         // candidate for cleaning
         accounts.add_root(0);
         accounts.add_root(1);
 
         // Slot 0 should be removed, and
-        // zero-lamport account should be cleaned
+        // zero-carat account should be cleaned
         accounts.clean_accounts(None, false, None);
 
         assert!(accounts.storage.get_slot_stores(0).is_none());
@@ -8322,7 +8322,7 @@ pub mod tests {
         // storage entries
         assert_eq!(accounts.alive_account_count_in_slot(1), 0);
 
-        // zero lamport account, should no longer exist in accounts index
+        // zero carat account, should no longer exist in accounts index
         // because it has been removed
         assert!(accounts.accounts_index.get(&pubkey, None, None).is_none());
     }
@@ -8356,7 +8356,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_clean_old_with_zero_lamport_account() {
+    fn test_clean_old_with_zero_carat_account() {
         solana_logger::setup();
 
         let accounts = AccountsDb::new(Vec::new(), &ClusterType::Development);
@@ -8384,13 +8384,13 @@ pub mod tests {
 
         accounts.clean_accounts(None, false, None);
 
-        //Old state behind zero-lamport account is cleaned up
+        //Old state behind zero-carat account is cleaned up
         assert_eq!(accounts.alive_account_count_in_slot(0), 0);
         assert_eq!(accounts.alive_account_count_in_slot(1), 2);
     }
 
     #[test]
-    fn test_clean_old_with_both_normal_and_zero_lamport_accounts() {
+    fn test_clean_old_with_both_normal_and_zero_carat_accounts() {
         solana_logger::setup();
 
         let mut accounts = AccountsDb::new_with_config_for_tests(
@@ -8494,15 +8494,15 @@ pub mod tests {
 
         accounts.clean_accounts(None, false, None);
 
-        //both zero lamport and normal accounts are cleaned up
+        //both zero carat and normal accounts are cleaned up
         assert_eq!(accounts.alive_account_count_in_slot(0), 0);
-        // The only store to slot 1 was a zero lamport account, should
-        // be purged by zero-lamport cleaning logic because slot 1 is
+        // The only store to slot 1 was a zero carat account, should
+        // be purged by zero-carat cleaning logic because slot 1 is
         // rooted
         assert_eq!(accounts.alive_account_count_in_slot(1), 0);
         assert_eq!(accounts.alive_account_count_in_slot(2), 1);
 
-        // `pubkey1`, a zero lamport account, should no longer exist in accounts index
+        // `pubkey1`, a zero carat account, should no longer exist in accounts index
         // because it has been removed by the clean
         assert!(accounts.accounts_index.get(&pubkey1, None, None).is_none());
 
@@ -8521,7 +8521,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_clean_max_slot_zero_lamport_account() {
+    fn test_clean_max_slot_zero_carat_account() {
         solana_logger::setup();
 
         let accounts = AccountsDb::new(Vec::new(), &ClusterType::Development);
@@ -8529,7 +8529,7 @@ pub mod tests {
         let account = AccountSharedData::new(1, 0, AccountSharedData::default().owner());
         let zero_account = AccountSharedData::new(0, 0, AccountSharedData::default().owner());
 
-        // store an account, make it a zero lamport account
+        // store an account, make it a zero carat account
         // in slot 1
         accounts.store_uncached(0, &[(&pubkey, &account)]);
         accounts.store_uncached(1, &[(&pubkey, &zero_account)]);
@@ -8552,7 +8552,7 @@ pub mod tests {
         assert_eq!(accounts.alive_account_count_in_slot(0), 0);
         assert_eq!(accounts.alive_account_count_in_slot(1), 0);
 
-        // The zero lamport account, should no longer exist in accounts index
+        // The zero carat account, should no longer exist in accounts index
         // because it has been removed
         assert!(accounts.accounts_index.get(&pubkey, None, None).is_none());
     }
@@ -8654,7 +8654,7 @@ pub mod tests {
 
         accounts.clean_accounts(None, false, None);
         // The first 20 accounts of slot 0 have been updated in slot 2, as well as
-        // accounts 30 and  31 (overwritten with zero-lamport accounts in slot 1 and
+        // accounts 30 and  31 (overwritten with zero-carat accounts in slot 1 and
         // slot 2 respectively), so only 78 accounts are left in slot 0's storage entries.
         assert!(check_storage(&accounts, 0, 78));
         // 10 of the 21 accounts have been modified in slot 2, so only 11
@@ -8733,18 +8733,18 @@ pub mod tests {
     #[test]
     fn test_accounts_db_purge_keep_live() {
         solana_logger::setup();
-        let some_lamport = 223;
-        let zero_lamport = 0;
+        let some_carat = 223;
+        let zero_carat = 0;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(some_lamport, no_data, &owner);
+        let account = AccountSharedData::new(some_carat, no_data, &owner);
         let pubkey = solana_sdk::pubkey::new_rand();
 
-        let account2 = AccountSharedData::new(some_lamport, no_data, &owner);
+        let account2 = AccountSharedData::new(some_carat, no_data, &owner);
         let pubkey2 = solana_sdk::pubkey::new_rand();
 
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, no_data, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, no_data, &owner);
 
         let accounts = AccountsDb::new_single_for_tests();
         accounts.add_root(0);
@@ -8772,11 +8772,11 @@ pub mod tests {
 
         // Step B
         current_slot += 1;
-        let zero_lamport_slot = current_slot;
-        accounts.store_uncached(current_slot, &[(&pubkey, &zero_lamport_account)]);
+        let zero_carat_slot = current_slot;
+        accounts.store_uncached(current_slot, &[(&pubkey, &zero_carat_account)]);
         accounts.add_root(current_slot);
 
-        assert_load_account(&accounts, current_slot, pubkey, zero_lamport);
+        assert_load_account(&accounts, current_slot, pubkey, zero_carat);
 
         current_slot += 1;
         accounts.add_root(current_slot);
@@ -8797,8 +8797,8 @@ pub mod tests {
             (slot_list.len(), slot_list[0].0)
         };
         assert_eq!(slot_list_len, 1);
-        // Zero lamport entry was not the one purged
-        assert_eq!(index_slot, zero_lamport_slot);
+        // Zero carat entry was not the one purged
+        assert_eq!(index_slot, zero_carat_slot);
         // The ref count should still be 2 because no slots were purged
         assert_eq!(accounts.ref_count_for_pubkey(&pubkey), 2);
 
@@ -8812,15 +8812,15 @@ pub mod tests {
     #[test]
     fn test_accounts_db_purge1() {
         solana_logger::setup();
-        let some_lamport = 223;
-        let zero_lamport = 0;
+        let some_carat = 223;
+        let zero_carat = 0;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(some_lamport, no_data, &owner);
+        let account = AccountSharedData::new(some_carat, no_data, &owner);
         let pubkey = solana_sdk::pubkey::new_rand();
 
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, no_data, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, no_data, &owner);
 
         let accounts = AccountsDb::new_single_for_tests();
         accounts.add_root(0);
@@ -8832,10 +8832,10 @@ pub mod tests {
 
         current_slot += 1;
         accounts.set_hash(current_slot, current_slot - 1);
-        accounts.store_uncached(current_slot, &[(&pubkey, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&pubkey, &zero_carat_account)]);
         accounts.add_root(current_slot);
 
-        assert_load_account(&accounts, current_slot, pubkey, zero_lamport);
+        assert_load_account(&accounts, current_slot, pubkey, zero_carat);
 
         // Otherwise slot 2 will not be removed
         current_slot += 1;
@@ -8872,19 +8872,19 @@ pub mod tests {
     fn test_accounts_db_serialize_zero_and_free() {
         solana_logger::setup();
 
-        let some_lamport = 223;
-        let zero_lamport = 0;
+        let some_carat = 223;
+        let zero_carat = 0;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(some_lamport, no_data, &owner);
+        let account = AccountSharedData::new(some_carat, no_data, &owner);
         let pubkey = solana_sdk::pubkey::new_rand();
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, no_data, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, no_data, &owner);
 
-        let account2 = AccountSharedData::new(some_lamport + 1, no_data, &owner);
+        let account2 = AccountSharedData::new(some_carat + 1, no_data, &owner);
         let pubkey2 = solana_sdk::pubkey::new_rand();
 
-        let filler_account = AccountSharedData::new(some_lamport, no_data, &owner);
+        let filler_account = AccountSharedData::new(some_carat, no_data, &owner);
         let filler_account_pubkey = solana_sdk::pubkey::new_rand();
 
         let accounts = AccountsDb::new_single_for_tests();
@@ -8894,7 +8894,7 @@ pub mod tests {
         accounts.add_root(current_slot);
 
         current_slot += 1;
-        accounts.store_uncached(current_slot, &[(&pubkey, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&pubkey, &zero_carat_account)]);
         accounts.store_uncached(current_slot, &[(&pubkey2, &account2)]);
 
         // Store enough accounts such that an additional store for slot 2 is created.
@@ -8911,7 +8911,7 @@ pub mod tests {
         }
         accounts.add_root(current_slot);
 
-        assert_load_account(&accounts, current_slot, pubkey, zero_lamport);
+        assert_load_account(&accounts, current_slot, pubkey, zero_carat);
 
         accounts.print_accounts_stats("accounts");
 
@@ -8922,29 +8922,29 @@ pub mod tests {
 
         accounts.print_accounts_stats("reconstructed");
 
-        assert_load_account(&accounts, current_slot, pubkey, zero_lamport);
+        assert_load_account(&accounts, current_slot, pubkey, zero_carat);
     }
 
-    fn with_chained_zero_lamport_accounts<F>(f: F)
+    fn with_chained_zero_carat_accounts<F>(f: F)
     where
         F: Fn(AccountsDb, Slot) -> AccountsDb,
     {
-        let some_lamport = 223;
-        let zero_lamport = 0;
-        let dummy_lamport = 999;
+        let some_carat = 223;
+        let zero_carat = 0;
+        let dummy_carat = 999;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(some_lamport, no_data, &owner);
-        let account2 = AccountSharedData::new(some_lamport + 100_001, no_data, &owner);
-        let account3 = AccountSharedData::new(some_lamport + 100_002, no_data, &owner);
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, no_data, &owner);
+        let account = AccountSharedData::new(some_carat, no_data, &owner);
+        let account2 = AccountSharedData::new(some_carat + 100_001, no_data, &owner);
+        let account3 = AccountSharedData::new(some_carat + 100_002, no_data, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, no_data, &owner);
 
         let pubkey = solana_sdk::pubkey::new_rand();
         let purged_pubkey1 = solana_sdk::pubkey::new_rand();
         let purged_pubkey2 = solana_sdk::pubkey::new_rand();
 
-        let dummy_account = AccountSharedData::new(dummy_lamport, no_data, &owner);
+        let dummy_account = AccountSharedData::new(dummy_carat, no_data, &owner);
         let dummy_pubkey = Pubkey::default();
 
         let accounts = AccountsDb::new_single_for_tests();
@@ -8955,12 +8955,12 @@ pub mod tests {
         accounts.add_root(current_slot);
 
         current_slot += 1;
-        accounts.store_uncached(current_slot, &[(&purged_pubkey1, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&purged_pubkey1, &zero_carat_account)]);
         accounts.store_uncached(current_slot, &[(&purged_pubkey2, &account3)]);
         accounts.add_root(current_slot);
 
         current_slot += 1;
-        accounts.store_uncached(current_slot, &[(&purged_pubkey2, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&purged_pubkey2, &zero_carat_account)]);
         accounts.add_root(current_slot);
 
         current_slot += 1;
@@ -8974,10 +8974,10 @@ pub mod tests {
 
         accounts.print_accounts_stats("post_f");
 
-        assert_load_account(&accounts, current_slot, pubkey, some_lamport);
+        assert_load_account(&accounts, current_slot, pubkey, some_carat);
         assert_load_account(&accounts, current_slot, purged_pubkey1, 0);
         assert_load_account(&accounts, current_slot, purged_pubkey2, 0);
-        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_lamport);
+        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_carat);
 
         accounts
             .verify_bank_hash_and_carats(4, &Ancestors::default(), 1222, true)
@@ -8987,7 +8987,7 @@ pub mod tests {
     #[test]
     fn test_accounts_purge_chained_purge_before_snapshot_restore() {
         solana_logger::setup();
-        with_chained_zero_lamport_accounts(|accounts, current_slot| {
+        with_chained_zero_carat_accounts(|accounts, current_slot| {
             accounts.clean_accounts(None, false, None);
             reconstruct_accounts_db_via_serialization(&accounts, current_slot)
         });
@@ -8996,7 +8996,7 @@ pub mod tests {
     #[test]
     fn test_accounts_purge_chained_purge_after_snapshot_restore() {
         solana_logger::setup();
-        with_chained_zero_lamport_accounts(|accounts, current_slot| {
+        with_chained_zero_carat_accounts(|accounts, current_slot| {
             let accounts = reconstruct_accounts_db_via_serialization(&accounts, current_slot);
             accounts.print_accounts_stats("after_reconstruct");
             accounts.clean_accounts(None, false, None);
@@ -9187,7 +9187,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_frozen_account_lamport_increase() {
+    fn test_frozen_account_carat_increase() {
         let frozen_pubkey =
             Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
         let mut db = AccountsDb::new(Vec::new(), &ClusterType::Development);
@@ -9222,7 +9222,7 @@ pub mod tests {
     #[should_panic(
         expected = "Frozen account My11111111111111111111111111111111111111111 modified.  Carats decreased from 1 to 0"
     )]
-    fn test_frozen_account_lamport_decrease() {
+    fn test_frozen_account_carat_decrease() {
         let frozen_pubkey =
             Pubkey::from_str("My11111111111111111111111111111111111111111").unwrap();
         let mut db = AccountsDb::new(Vec::new(), &ClusterType::Development);
@@ -9526,7 +9526,7 @@ pub mod tests {
 
         assert_matches!(
             db.verify_bank_hash_and_carats(some_slot, &ancestors, 10, true),
-            Err(MismatchedTotalLamports(expected, actual)) if expected == 2 && actual == 10
+            Err(MismatchedTotalCarats(expected, actual)) if expected == 2 && actual == 10
         );
     }
 
@@ -9739,16 +9739,16 @@ pub mod tests {
     #[test]
     fn test_accounts_purge_long_chained_after_snapshot_restore() {
         solana_logger::setup();
-        let old_lamport = 223;
-        let zero_lamport = 0;
+        let old_carat = 223;
+        let zero_carat = 0;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(old_lamport, no_data, &owner);
-        let account2 = AccountSharedData::new(old_lamport + 100_001, no_data, &owner);
-        let account3 = AccountSharedData::new(old_lamport + 100_002, no_data, &owner);
+        let account = AccountSharedData::new(old_carat, no_data, &owner);
+        let account2 = AccountSharedData::new(old_carat + 100_001, no_data, &owner);
+        let account3 = AccountSharedData::new(old_carat + 100_002, no_data, &owner);
         let dummy_account = AccountSharedData::new(99_999_999, no_data, &owner);
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, no_data, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, no_data, &owner);
 
         let pubkey = solana_sdk::pubkey::new_rand();
         let dummy_pubkey = solana_sdk::pubkey::new_rand();
@@ -9774,12 +9774,12 @@ pub mod tests {
         accounts.add_root(current_slot);
 
         current_slot += 1;
-        accounts.store_uncached(current_slot, &[(&purged_pubkey1, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&purged_pubkey1, &zero_carat_account)]);
         accounts.store_uncached(current_slot, &[(&purged_pubkey2, &account3)]);
         accounts.add_root(current_slot);
 
         current_slot += 1;
-        accounts.store_uncached(current_slot, &[(&purged_pubkey2, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&purged_pubkey2, &zero_carat_account)]);
         accounts.add_root(current_slot);
 
         current_slot += 1;
@@ -9792,7 +9792,7 @@ pub mod tests {
         accounts.clean_accounts(None, false, None);
         accounts.print_count_and_status("after purge zero");
 
-        assert_load_account(&accounts, current_slot, pubkey, old_lamport);
+        assert_load_account(&accounts, current_slot, pubkey, old_carat);
         assert_load_account(&accounts, current_slot, purged_pubkey1, 0);
         assert_load_account(&accounts, current_slot, purged_pubkey2, 0);
     }
@@ -9802,20 +9802,20 @@ pub mod tests {
         let pubkey2 = Pubkey::from_str("My22211111111111111111111111111111111111111").unwrap();
         let pubkey3 = Pubkey::from_str("My33311111111111111111111111111111111111111").unwrap();
 
-        let old_lamport = 223;
-        let zero_lamport = 0;
-        let dummy_lamport = 999_999;
+        let old_carat = 223;
+        let zero_carat = 0;
+        let dummy_carat = 999_999;
 
         // size data so only 1 fits in a 4k store
         let data_size = 2200;
 
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(old_lamport, data_size, &owner);
-        let account2 = AccountSharedData::new(old_lamport + 100_001, data_size, &owner);
-        let account3 = AccountSharedData::new(old_lamport + 100_002, data_size, &owner);
-        let account4 = AccountSharedData::new(dummy_lamport, data_size, &owner);
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, data_size, &owner);
+        let account = AccountSharedData::new(old_carat, data_size, &owner);
+        let account2 = AccountSharedData::new(old_carat + 100_001, data_size, &owner);
+        let account3 = AccountSharedData::new(old_carat + 100_002, data_size, &owner);
+        let account4 = AccountSharedData::new(dummy_carat, data_size, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, data_size, &owner);
 
         let mut current_slot = 0;
         let accounts = AccountsDb::new_sized_no_extra_stores(Vec::new(), store_size);
@@ -9869,12 +9869,12 @@ pub mod tests {
 
         accounts.print_accounts_stats("Post-C");
 
-        // D: Make all keys 0-lamport, cleans all keys
+        // D: Make all keys 0-carat, cleans all keys
         current_slot += 1;
         assert_eq!(3, accounts.ref_count_for_pubkey(&pubkey1));
-        accounts.store_uncached(current_slot, &[(&pubkey1, &zero_lamport_account)]);
-        accounts.store_uncached(current_slot, &[(&pubkey2, &zero_lamport_account)]);
-        accounts.store_uncached(current_slot, &[(&pubkey3, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&pubkey1, &zero_carat_account)]);
+        accounts.store_uncached(current_slot, &[(&pubkey2, &zero_carat_account)]);
+        accounts.store_uncached(current_slot, &[(&pubkey3, &zero_carat_account)]);
 
         let snapshot_stores = accounts.get_snapshot_storages(current_slot, None, None).0;
         let total_accounts: usize = snapshot_stores
@@ -9929,17 +9929,17 @@ pub mod tests {
     #[test]
     fn test_accounts_clean_after_snapshot_restore_then_old_revives() {
         solana_logger::setup();
-        let old_lamport = 223;
-        let zero_lamport = 0;
+        let old_carat = 223;
+        let zero_carat = 0;
         let no_data = 0;
-        let dummy_lamport = 999_999;
+        let dummy_carat = 999_999;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(old_lamport, no_data, &owner);
-        let account2 = AccountSharedData::new(old_lamport + 100_001, no_data, &owner);
-        let account3 = AccountSharedData::new(old_lamport + 100_002, no_data, &owner);
-        let dummy_account = AccountSharedData::new(dummy_lamport, no_data, &owner);
-        let zero_lamport_account = AccountSharedData::new(zero_lamport, no_data, &owner);
+        let account = AccountSharedData::new(old_carat, no_data, &owner);
+        let account2 = AccountSharedData::new(old_carat + 100_001, no_data, &owner);
+        let account3 = AccountSharedData::new(old_carat + 100_002, no_data, &owner);
+        let dummy_account = AccountSharedData::new(dummy_carat, no_data, &owner);
+        let zero_carat_account = AccountSharedData::new(zero_carat, no_data, &owner);
 
         let pubkey1 = solana_sdk::pubkey::new_rand();
         let pubkey2 = solana_sdk::pubkey::new_rand();
@@ -9976,10 +9976,10 @@ pub mod tests {
         accounts.get_accounts_delta_hash(current_slot);
         accounts.add_root(current_slot);
 
-        // D: Make pubkey1 0-lamport; also triggers clean of step B
+        // D: Make pubkey1 0-carat; also triggers clean of step B
         current_slot += 1;
         assert_eq!(3, accounts.ref_count_for_pubkey(&pubkey1));
-        accounts.store_uncached(current_slot, &[(&pubkey1, &zero_lamport_account)]);
+        accounts.store_uncached(current_slot, &[(&pubkey1, &zero_carat_account)]);
         accounts.clean_accounts(None, false, None);
 
         assert_eq!(
@@ -9997,9 +9997,9 @@ pub mod tests {
         accounts.get_accounts_delta_hash(current_slot);
         accounts.add_root(current_slot);
 
-        assert_load_account(&accounts, current_slot, pubkey1, zero_lamport);
-        assert_load_account(&accounts, current_slot, pubkey2, old_lamport);
-        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_lamport);
+        assert_load_account(&accounts, current_slot, pubkey1, zero_carat);
+        assert_load_account(&accounts, current_slot, pubkey2, old_carat);
+        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_carat);
 
         // At this point, there is no index entries for A and B
         // If step C and step D should be purged, snapshot restore would cause
@@ -10011,9 +10011,9 @@ pub mod tests {
 
         info!("pubkey: {}", pubkey1);
         accounts.print_accounts_stats("pre_clean");
-        assert_load_account(&accounts, current_slot, pubkey1, zero_lamport);
-        assert_load_account(&accounts, current_slot, pubkey2, old_lamport);
-        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_lamport);
+        assert_load_account(&accounts, current_slot, pubkey1, zero_carat);
+        assert_load_account(&accounts, current_slot, pubkey2, old_carat);
+        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_carat);
 
         // F: Finally, make Step A cleanable
         current_slot += 1;
@@ -10029,8 +10029,8 @@ pub mod tests {
 
         // Ensure pubkey2 is cleaned from the index finally
         assert_not_load_account(&accounts, current_slot, pubkey1);
-        assert_load_account(&accounts, current_slot, pubkey2, old_lamport);
-        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_lamport);
+        assert_load_account(&accounts, current_slot, pubkey2, old_carat);
+        assert_load_account(&accounts, current_slot, dummy_pubkey, dummy_carat);
     }
 
     #[test]
@@ -10140,11 +10140,11 @@ pub mod tests {
                 .map(|_| solana_sdk::pubkey::new_rand())
                 .collect();
 
-            let some_lamport = 223;
+            let some_carat = 223;
             let no_data = 0;
             let owner = *AccountSharedData::default().owner();
 
-            let account = AccountSharedData::new(some_lamport, no_data, &owner);
+            let account = AccountSharedData::new(some_carat, no_data, &owner);
 
             let mut current_slot = 0;
 
@@ -10209,11 +10209,11 @@ pub mod tests {
             .map(|_| solana_sdk::pubkey::new_rand())
             .collect();
 
-        let some_lamport = 223;
+        let some_carat = 223;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(some_lamport, no_data, &owner);
+        let account = AccountSharedData::new(some_carat, no_data, &owner);
 
         let mut current_slot = 0;
 
@@ -10495,11 +10495,11 @@ pub mod tests {
             .map(|_| solana_sdk::pubkey::new_rand())
             .collect();
 
-        let some_lamport = 223;
+        let some_carat = 223;
         let no_data = 0;
         let owner = *AccountSharedData::default().owner();
 
-        let account = AccountSharedData::new(some_lamport, no_data, &owner);
+        let account = AccountSharedData::new(some_carat, no_data, &owner);
 
         let mut current_slot = 0;
 
@@ -10831,27 +10831,27 @@ pub mod tests {
     }
 
     #[test]
-    fn test_zero_lamport_new_root_not_cleaned() {
+    fn test_zero_carat_new_root_not_cleaned() {
         let db = AccountsDb::new(Vec::new(), &ClusterType::Development);
         let account_key = Pubkey::new_unique();
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
 
-        // Store zero lamport account into slots 0 and 1, root both slots
-        db.store_uncached(0, &[(&account_key, &zero_lamport_account)]);
-        db.store_uncached(1, &[(&account_key, &zero_lamport_account)]);
+        // Store zero carat account into slots 0 and 1, root both slots
+        db.store_uncached(0, &[(&account_key, &zero_carat_account)]);
+        db.store_uncached(1, &[(&account_key, &zero_carat_account)]);
         db.get_accounts_delta_hash(0);
         db.add_root(0);
         db.get_accounts_delta_hash(1);
         db.add_root(1);
 
-        // Only clean zero lamport accounts up to slot 0
+        // Only clean zero carat accounts up to slot 0
         db.clean_accounts(Some(0), false, None);
 
-        // Should still be able to find zero lamport account in slot 1
+        // Should still be able to find zero carat account in slot 1
         assert_eq!(
             db.load_without_fixed_root(&Ancestors::default(), &account_key),
-            Some((zero_lamport_account, 1))
+            Some((zero_carat_account, 1))
         );
     }
 
@@ -11046,10 +11046,10 @@ pub mod tests {
         ));
 
         let account_key = Pubkey::new_unique();
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
         let slot1_account = AccountSharedData::new(1, 1, AccountSharedData::default().owner());
-        db.store_cached(0, &[(&account_key, &zero_lamport_account)]);
+        db.store_cached(0, &[(&account_key, &zero_carat_account)]);
         db.store_cached(1, &[(&account_key, &slot1_account)]);
 
         db.add_root(0);
@@ -11072,7 +11072,7 @@ pub mod tests {
             .unwrap();
         assert_eq!(account.carats(), 1);
         assert_eq!(db.read_only_accounts_cache.cache_len(), 1);
-        db.store_cached(2, &[(&account_key, &zero_lamport_account)]);
+        db.store_cached(2, &[(&account_key, &zero_carat_account)]);
         assert_eq!(db.read_only_accounts_cache.cache_len(), 1);
         let account = db
             .load_with_fixed_root(&Ancestors::default(), &account_key)
@@ -11094,10 +11094,10 @@ pub mod tests {
         ));
 
         let account_key = Pubkey::new_unique();
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
         let slot1_account = AccountSharedData::new(1, 1, AccountSharedData::default().owner());
-        db.store_cached(0, &[(&account_key, &zero_lamport_account)]);
+        db.store_cached(0, &[(&account_key, &zero_carat_account)]);
         db.store_cached(1, &[(&account_key, &slot1_account)]);
 
         db.add_root(0);
@@ -11132,7 +11132,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_flush_cache_dont_clean_zero_lamport_account() {
+    fn test_flush_cache_dont_clean_zero_carat_account() {
         let caching_enabled = true;
         let db = Arc::new(AccountsDb::new_with_config_for_tests(
             Vec::new(),
@@ -11142,34 +11142,34 @@ pub mod tests {
             AccountShrinkThreshold::default(),
         ));
 
-        let zero_lamport_account_key = Pubkey::new_unique();
+        let zero_carat_account_key = Pubkey::new_unique();
         let other_account_key = Pubkey::new_unique();
 
         let original_carats = 1;
         let slot0_account =
             AccountSharedData::new(original_carats, 1, AccountSharedData::default().owner());
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
 
         // Store into slot 0, and then flush the slot to storage
-        db.store_cached(0, &[(&zero_lamport_account_key, &slot0_account)]);
-        // Second key keeps other lamport account entry for slot 0 alive,
-        // preventing clean of the zero_lamport_account in slot 1.
+        db.store_cached(0, &[(&zero_carat_account_key, &slot0_account)]);
+        // Second key keeps other carat account entry for slot 0 alive,
+        // preventing clean of the zero_carat_account in slot 1.
         db.store_cached(0, &[(&other_account_key, &slot0_account)]);
         db.add_root(0);
         db.flush_accounts_cache(true, None);
         assert!(!db.storage.get_slot_storage_entries(0).unwrap().is_empty());
 
         // Store into slot 1, a dummy slot that will be dead and purged before flush
-        db.store_cached(1, &[(&zero_lamport_account_key, &zero_lamport_account)]);
+        db.store_cached(1, &[(&zero_carat_account_key, &zero_carat_account)]);
 
         // Store into slot 2, which makes all updates from slot 1 outdated.
         // This means slot 1 is a dead slot. Later, slot 1 will be cleaned/purged
         // before it even reaches storage, but this purge of slot 1should not affect
-        // the refcount of `zero_lamport_account_key` because cached keys do not bump
+        // the refcount of `zero_carat_account_key` because cached keys do not bump
         // the refcount in the index. This means clean should *not* remove
-        // `zero_lamport_account_key` from slot 2
-        db.store_cached(2, &[(&zero_lamport_account_key, &zero_lamport_account)]);
+        // `zero_carat_account_key` from slot 2
+        db.store_cached(2, &[(&zero_carat_account_key, &zero_carat_account)]);
         db.add_root(1);
         db.add_root(2);
 
@@ -11178,11 +11178,11 @@ pub mod tests {
         db.flush_accounts_cache(true, None);
         db.clean_accounts(None, false, None);
 
-        // The `zero_lamport_account_key` is still alive in slot 1, so refcount for the
+        // The `zero_carat_account_key` is still alive in slot 1, so refcount for the
         // pubkey should be 2
         assert_eq!(
             db.accounts_index
-                .ref_count_from_storage(&zero_lamport_account_key),
+                .ref_count_from_storage(&zero_carat_account_key),
             2
         );
         assert_eq!(
@@ -11190,8 +11190,8 @@ pub mod tests {
             1
         );
 
-        // The zero-lamport account in slot 2 should not be purged yet, because the
-        // entry in slot 1 is blocking cleanup of the zero-lamport account.
+        // The zero-carat account in slot 2 should not be purged yet, because the
+        // entry in slot 1 is blocking cleanup of the zero-carat account.
         let max_root = None;
         // Fine to simulate a transaction load since we are not doing any out of band
         // removals, only using clean_accounts
@@ -11199,7 +11199,7 @@ pub mod tests {
         assert_eq!(
             db.do_load(
                 &Ancestors::default(),
-                &zero_lamport_account_key,
+                &zero_carat_account_key,
                 max_root,
                 load_hint
             )
@@ -11278,19 +11278,19 @@ pub mod tests {
         ));
         let account_key = Pubkey::new_unique();
         let account_key2 = Pubkey::new_unique();
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
         let slot1_account = AccountSharedData::new(1, 1, AccountSharedData::default().owner());
         let slot2_account = AccountSharedData::new(2, 1, AccountSharedData::default().owner());
 
         /*
-            Store zero lamport account into slots 0, 1, 2 where
+            Store zero carat account into slots 0, 1, 2 where
             root slots are 0, 2, and slot 1 is unrooted.
                                     0 (root)
                                 /        \
                               1            2 (root)
         */
-        db.store_cached(0, &[(&account_key, &zero_lamport_account)]);
+        db.store_cached(0, &[(&account_key, &zero_carat_account)]);
         db.store_cached(1, &[(&account_key, &slot1_account)]);
         // Fodder for the scan so that the lock on `account_key` is not held
         db.store_cached(1, &[(&account_key2, &slot1_account)]);
@@ -11331,7 +11331,7 @@ pub mod tests {
                 LoadHint::Unspecified,
             )
             .unwrap();
-        assert_eq!(account.0.carats(), zero_lamport_account.carats());
+        assert_eq!(account.0.carats(), zero_carat_account.carats());
 
         // Run clean, unrooted slot 1 should not be purged, and still readable from the cache,
         // because we're still doing a scan on it.
@@ -12772,15 +12772,15 @@ pub mod tests {
         accounts.get_accounts_delta_hash(slot0);
 
         // On the next *rooted* slot, update the `shared_key` account to zero carats
-        let zero_lamport_account =
+        let zero_carat_account =
             AccountSharedData::new(0, 0, AccountSharedData::default().owner());
-        accounts.store_uncached(slot1, &[(&shared_key, &zero_lamport_account)]);
+        accounts.store_uncached(slot1, &[(&shared_key, &zero_carat_account)]);
 
         // Simulate adding dirty pubkeys on bank freeze, set root
         accounts.get_accounts_delta_hash(slot1);
         accounts.add_root(slot1);
 
-        // The later rooted zero-lamport update to `shared_key` cannot be cleaned
+        // The later rooted zero-carat update to `shared_key` cannot be cleaned
         // because it is kept alive by the unrooted slot.
         accounts.clean_accounts(None, false, None);
         assert!(accounts
@@ -12853,7 +12853,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_filter_zero_lamport_clean_for_incremental_snapshots() {
+    fn test_filter_zero_carat_clean_for_incremental_snapshots() {
         solana_logger::setup();
         let slot = 10;
 
@@ -12880,7 +12880,7 @@ pub mod tests {
             purges_zero_carats.insert(pubkey, (vec![(slot, account_info)], 1));
 
             let accounts_db = AccountsDb::new_single_for_tests();
-            accounts_db.filter_zero_lamport_clean_for_incremental_snapshots(
+            accounts_db.filter_zero_carat_clean_for_incremental_snapshots(
                 test_params.max_clean_root,
                 test_params.last_full_snapshot_slot,
                 &store_counts,
@@ -12911,7 +12911,7 @@ pub mod tests {
             });
         }
 
-        // Scenario 2: last full snapshot is GREATER THAN zero lamport account slot
+        // Scenario 2: last full snapshot is GREATER THAN zero carat account slot
         // In this scenario always purge, and just test the various permutations of
         // `should_filter_for_incremental_snapshots` based on `max_clean_root`.
         {
@@ -12936,7 +12936,7 @@ pub mod tests {
             });
         }
 
-        // Scenario 3: last full snapshot is EQUAL TO zero lamport account slot
+        // Scenario 3: last full snapshot is EQUAL TO zero carat account slot
         // In this scenario always purge, as it's the same as Scenario 2.
         {
             let last_full_snapshot_slot = Some(slot);
@@ -12960,7 +12960,7 @@ pub mod tests {
             });
         }
 
-        // Scenario 4: last full snapshot is LESS THAN zero lamport account slot
+        // Scenario 4: last full snapshot is LESS THAN zero carat account slot
         // In this scenario do *not* purge, except when `should_filter_for_incremental_snapshots`
         // is false
         {

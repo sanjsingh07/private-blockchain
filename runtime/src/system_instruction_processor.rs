@@ -191,7 +191,7 @@ fn transfer_verified(
             from.carats()?,
             carats
         );
-        return Err(SystemError::ResultWithNegativeLamports.into());
+        return Err(SystemError::ResultWithNegativeCarats.into());
     }
 
     from.try_account_ref_mut()?.checked_sub_carats(carats)?;
@@ -739,7 +739,7 @@ mod tests {
             &[from, to].iter().cloned().collect::<HashSet<_>>(),
             &MockInvokeContext::new(vec![]),
         );
-        assert_eq!(result, Err(SystemError::ResultWithNegativeLamports.into()));
+        assert_eq!(result, Err(SystemError::ResultWithNegativeCarats.into()));
     }
 
     #[test]
@@ -1167,7 +1167,7 @@ mod tests {
             100,
             &MockInvokeContext::new(vec![]),
         );
-        assert_eq!(result, Err(SystemError::ResultWithNegativeLamports.into()));
+        assert_eq!(result, Err(SystemError::ResultWithNegativeCarats.into()));
         assert_eq!(from_keyed_account.account.borrow().carats(), 50);
         assert_eq!(to_keyed_account.account.borrow().carats(), 51);
 
@@ -1237,7 +1237,7 @@ mod tests {
             100,
             &MockInvokeContext::new(vec![]),
         );
-        assert_eq!(result, Err(SystemError::ResultWithNegativeLamports.into()));
+        assert_eq!(result, Err(SystemError::ResultWithNegativeCarats.into()));
         assert_eq!(from_keyed_account.account.borrow().carats(), 50);
         assert_eq!(to_keyed_account.account.borrow().carats(), 51);
 
@@ -1325,7 +1325,7 @@ mod tests {
             .is_ok());
     }
 
-    fn with_create_zero_lamport<F>(callback: F)
+    fn with_create_zero_carat<F>(callback: F)
     where
         F: Fn(&Bank),
     {
@@ -1380,8 +1380,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_zero_lamport_with_clean() {
-        with_create_zero_lamport(|bank| {
+    fn test_create_zero_carat_with_clean() {
+        with_create_zero_carat(|bank| {
             bank.freeze();
             bank.squash();
             bank.force_flush_accounts_cache();
@@ -1393,9 +1393,9 @@ mod tests {
     }
 
     #[test]
-    fn test_create_zero_lamport_without_clean() {
-        with_create_zero_lamport(|_| {
-            // just do nothing; this should behave identically with test_create_zero_lamport_with_clean
+    fn test_create_zero_carat_without_clean() {
+        with_create_zero_carat(|_| {
+            // just do nothing; this should behave identically with test_create_zero_carat_with_clean
         });
     }
 

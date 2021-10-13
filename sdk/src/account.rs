@@ -1,6 +1,6 @@
 use crate::{
     clock::{Epoch, INITIAL_RENT_EPOCH},
-    carats::LamportsError,
+    carats::CaratsError,
     pubkey::Pubkey,
 };
 use solana_program::{account_info::AccountInfo, sysvar::Sysvar};
@@ -80,19 +80,19 @@ impl From<Account> for AccountSharedData {
 
 pub trait WritableAccount: ReadableAccount {
     fn set_carats(&mut self, carats: u64);
-    fn checked_add_carats(&mut self, carats: u64) -> Result<(), LamportsError> {
+    fn checked_add_carats(&mut self, carats: u64) -> Result<(), CaratsError> {
         self.set_carats(
             self.carats()
                 .checked_add(carats)
-                .ok_or(LamportsError::ArithmeticOverflow)?,
+                .ok_or(CaratsError::ArithmeticOverflow)?,
         );
         Ok(())
     }
-    fn checked_sub_carats(&mut self, carats: u64) -> Result<(), LamportsError> {
+    fn checked_sub_carats(&mut self, carats: u64) -> Result<(), CaratsError> {
         self.set_carats(
             self.carats()
                 .checked_sub(carats)
-                .ok_or(LamportsError::ArithmeticUnderflow)?,
+                .ok_or(CaratsError::ArithmeticUnderflow)?,
         );
         Ok(())
     }

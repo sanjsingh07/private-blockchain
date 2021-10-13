@@ -572,7 +572,7 @@ fn main() {
             Arg::with_name("carats")
                 .long("carats")
                 .takes_value(true)
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .help("How many carats to fund each account"),
         )
         .arg(

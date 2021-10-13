@@ -811,7 +811,7 @@ fn test_program_bpf_invoke_sanity() {
     const TEST_PRIVILEGE_DEESCALATION_ESCALATION_WRITABLE: u8 = 13;
     const TEST_WRITABLE_DEESCALATION_WRITABLE: u8 = 14;
     const TEST_NESTED_INVOKE_TOO_DEEP: u8 = 15;
-    const TEST_EXECUTABLE_LAMPORTS: u8 = 16;
+    const TEST_EXECUTABLE_CARATS: u8 = 16;
     const TEST_RETURN_DATA_TOO_LARGE: u8 = 18;
 
     #[allow(dead_code)]
@@ -1084,8 +1084,8 @@ fn test_program_bpf_invoke_sanity() {
         );
 
         do_invoke_failure_test_local(
-            TEST_EXECUTABLE_LAMPORTS,
-            TransactionError::InstructionError(0, InstructionError::ExecutableLamportChange),
+            TEST_EXECUTABLE_CARATS,
+            TransactionError::InstructionError(0, InstructionError::ExecutableCaratChange),
             &[invoke_program_id.clone()],
         );
 

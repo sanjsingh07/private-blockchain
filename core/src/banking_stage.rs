@@ -2054,7 +2054,7 @@ mod tests {
             results[0] = (
                 Err(TransactionError::InstructionError(
                     1,
-                    SystemError::ResultWithNegativeLamports.into(),
+                    SystemError::ResultWithNegativeCarats.into(),
                 )),
                 None,
             );

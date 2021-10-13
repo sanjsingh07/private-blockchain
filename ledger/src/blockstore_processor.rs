@@ -2194,7 +2194,7 @@ pub mod tests {
             entries.push(entry);
 
             // Add a second Transaction that will produce a
-            // InstructionError<0, ResultWithNegativeLamports> error when processed
+            // InstructionError<0, ResultWithNegativeCarats> error when processed
             let keypair2 = Keypair::new();
             let tx =
                 system_transaction::transfer(&mint_keypair, &keypair2.pubkey(), 101, blockhash);
@@ -2540,7 +2540,7 @@ pub mod tests {
         )
         .is_err());
 
-        // First transaction in first entry succeeded, so keypair1 lost 1 lamport
+        // First transaction in first entry succeeded, so keypair1 lost 1 carat
         assert_eq!(bank.get_balance(&keypair1.pubkey()), 3);
         assert_eq!(bank.get_balance(&keypair2.pubkey()), 4);
 
@@ -2719,7 +2719,7 @@ pub mod tests {
 
         let keypairs: Vec<_> = (0..NUM_TRANSFERS * 2).map(|_| Keypair::new()).collect();
 
-        // give everybody one lamport
+        // give everybody one carat
         for keypair in &keypairs {
             bank.transfer(1, &mint_keypair, &keypair.pubkey())
                 .expect("funding failed");
@@ -2916,7 +2916,7 @@ pub mod tests {
             bank.transfer(10_001, &mint_keypair, &pubkey),
             Err(TransactionError::InstructionError(
                 0,
-                SystemError::ResultWithNegativeLamports.into(),
+                SystemError::ResultWithNegativeCarats.into(),
             ))
         );
         assert_eq!(
@@ -3234,7 +3234,7 @@ pub mod tests {
 
         let keypairs: Vec<_> = (0..NUM_TRANSFERS * 2).map(|_| Keypair::new()).collect();
 
-        // give everybody one lamport
+        // give everybody one carat
         for keypair in &keypairs {
             bank.transfer(1, &mint_keypair, &keypair.pubkey())
                 .expect("funding failed");

@@ -25,8 +25,8 @@ static const uint8_t TEST_PRIVILEGE_DEESCALATION_ESCALATION_SIGNER = 12;
 static const uint8_t TEST_PRIVILEGE_DEESCALATION_ESCALATION_WRITABLE = 13;
 static const uint8_t TEST_WRITABLE_DEESCALATION_WRITABLE = 14;
 static const uint8_t TEST_NESTED_INVOKE_TOO_DEEP = 15;
-static const uint8_t TEST_EXECUTABLE_LAMPORTS = 16;
-static const uint8_t ADD_LAMPORTS = 17;
+static const uint8_t TEST_EXECUTABLE_CARATS = 16;
+static const uint8_t ADD_CARATS = 17;
 static const uint8_t TEST_RETURN_DATA_TOO_LARGE = 18;
 
 static const int MINT_INDEX = 0;
@@ -569,7 +569,7 @@ extern uint64_t entrypoint(const uint8_t *input) {
     do_nested_invokes(5, accounts, params.ka_num);
     break;
   }
-  case TEST_EXECUTABLE_LAMPORTS: {
+  case TEST_EXECUTABLE_CARATS: {
     sol_log("Test executable carats");
     accounts[ARGUMENT_INDEX].executable = true;
     *accounts[ARGUMENT_INDEX].carats -= 1;
@@ -578,7 +578,7 @@ extern uint64_t entrypoint(const uint8_t *input) {
       {accounts[ARGUMENT_INDEX].key, true, false},
       {accounts[DERIVED_KEY1_INDEX].key, true, false},
     };
-    uint8_t data[] = {ADD_LAMPORTS, 0, 0, 0};
+    uint8_t data[] = {ADD_CARATS, 0, 0, 0};
     SolPubkey program_id;
     sol_memcpy(&program_id, params.program_id, sizeof(SolPubkey));
     const SolInstruction instruction = {&program_id,
@@ -588,7 +588,7 @@ extern uint64_t entrypoint(const uint8_t *input) {
     *accounts[ARGUMENT_INDEX].carats += 1;
     break;
   }
-  case ADD_LAMPORTS: {
+  case ADD_CARATS: {
     *accounts[0].carats += 1;
      break;
   }

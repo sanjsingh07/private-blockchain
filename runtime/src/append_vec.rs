@@ -778,7 +778,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_new_from_file_crafted_zero_lamport_account() {
+    fn test_new_from_file_crafted_zero_carat_account() {
         let file = get_append_vec_path("test_append");
         let path = &file.path;
         let mut av = AppendVec::new(path, true, 1024 * 1024);

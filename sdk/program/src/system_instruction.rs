@@ -16,7 +16,7 @@ pub enum SystemError {
     #[error("an account with the same address already exists")]
     AccountAlreadyInUse,
     #[error("account does not have enough GEMA to perform the operation")]
-    ResultWithNegativeLamports,
+    ResultWithNegativeCarats,
     #[error("cannot assign account to this program id")]
     InvalidProgramId,
     #[error("cannot allocate account data of this length")]

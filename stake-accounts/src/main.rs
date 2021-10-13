@@ -260,8 +260,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             let balances = get_balances(&client, addresses)?;
             let carats: u64 = balances.into_iter().map(|(_, bal)| bal).sum();
-            let sol = carats_to_gema(carats);
-            println!("{} GEMA", sol);
+            let gema = carats_to_gema(carats);
+            println!("{} GEMA", gema);
         }
         Command::Authorize(args) => {
             process_authorize_stake_accounts(&client, &args)?;

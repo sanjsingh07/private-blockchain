@@ -1447,7 +1447,7 @@ pub fn process_ping(
                                 let elapsed_time_millis = elapsed_time.as_millis() as u64;
                                 confirmation_time.push_back(elapsed_time_millis);
                                 println!(
-                                    "{}{}{} lamport(s) transferred: seq={:<3} time={:>4}ms signature={}",
+                                    "{}{}{} carat(s) transferred: seq={:<3} time={:>4}ms signature={}",
                                     timestamp(),
                                     CHECK_MARK, carats, seq, elapsed_time_millis, signature
                                 );

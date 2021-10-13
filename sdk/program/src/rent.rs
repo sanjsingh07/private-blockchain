@@ -20,7 +20,7 @@ pub struct Rent {
 ///  $1 per GEMA
 ///  $0.01 per megabyte day
 ///  $3.65 per megabyte year
-pub const DEFAULT_LAMPORTS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);
+pub const DEFAULT_CARATS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);
 
 /// default amount of time (in years) the balance has to include rent for
 pub const DEFAULT_EXEMPTION_THRESHOLD: f64 = 2.0;
@@ -34,7 +34,7 @@ pub const ACCOUNT_STORAGE_OVERHEAD: u64 = 128;
 impl Default for Rent {
     fn default() -> Self {
         Self {
-            carats_per_byte_year: DEFAULT_LAMPORTS_PER_BYTE_YEAR,
+            carats_per_byte_year: DEFAULT_CARATS_PER_BYTE_YEAR,
             exemption_threshold: DEFAULT_EXEMPTION_THRESHOLD,
             burn_percent: DEFAULT_BURN_PERCENT,
         }
@@ -87,7 +87,7 @@ impl Rent {
     pub fn with_slots_per_epoch(slots_per_epoch: u64) -> Self {
         let ratio = slots_per_epoch as f64 / DEFAULT_SLOTS_PER_EPOCH as f64;
         let exemption_threshold = DEFAULT_EXEMPTION_THRESHOLD as f64 * ratio;
-        let carats_per_byte_year = (DEFAULT_LAMPORTS_PER_BYTE_YEAR as f64 / ratio) as u64;
+        let carats_per_byte_year = (DEFAULT_CARATS_PER_BYTE_YEAR as f64 / ratio) as u64;
         Self {
             carats_per_byte_year,
             exemption_threshold,
@@ -107,14 +107,14 @@ mod tests {
         assert_eq!(
             default_rent.due(0, 2, 1.2),
             (
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_LAMPORTS_PER_BYTE_YEAR) as f64 * 1.2)
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_CARATS_PER_BYTE_YEAR) as f64 * 1.2)
                     as u64,
-                DEFAULT_LAMPORTS_PER_BYTE_YEAR == 0
+                DEFAULT_CARATS_PER_BYTE_YEAR == 0
             )
         );
         assert_eq!(
             default_rent.due(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_LAMPORTS_PER_BYTE_YEAR) as f64
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_CARATS_PER_BYTE_YEAR) as f64
                     * DEFAULT_EXEMPTION_THRESHOLD) as u64,
                 2,
                 1.2

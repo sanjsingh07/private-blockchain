@@ -17,7 +17,7 @@ use solana_sdk::{
     account::{AccountSharedData, ReadableAccount},
     genesis_config::{create_genesis_config, ClusterType},
     hash::Hash,
-    carats::LamportsError,
+    carats::CaratsError,
     pubkey::Pubkey,
 };
 use std::{
@@ -28,7 +28,7 @@ use std::{
 };
 use test::Bencher;
 
-fn deposit_many(bank: &Bank, pubkeys: &mut Vec<Pubkey>, num: usize) -> Result<(), LamportsError> {
+fn deposit_many(bank: &Bank, pubkeys: &mut Vec<Pubkey>, num: usize) -> Result<(), CaratsError> {
     for t in 0..num {
         let pubkey = solana_sdk::pubkey::new_rand();
         let account =

@@ -1813,7 +1813,7 @@ impl JsonRpcRequestProcessor {
                 .get_filtered_indexed_accounts(&IndexKey::ProgramId(*program_id), |account| {
                     // The program-id account index checks for Account owner on inclusion. However, due
                     // to the current AccountsDb implementation, an account may remain in storage as a
-                    // zero-lamport AccountSharedData::Default() after being wiped and reinitialized in later
+                    // zero-carat AccountSharedData::Default() after being wiped and reinitialized in later
                     // updates. We include the redundant filters here to avoid returning these
                     // accounts.
                     account.owner() == program_id && filter_closure(account)
@@ -1839,7 +1839,7 @@ impl JsonRpcRequestProcessor {
     ) -> RpcCustomResult<Vec<(Pubkey, AccountSharedData)>> {
         // The by-owner accounts index checks for Token Account state and Owner address on
         // inclusion. However, due to the current AccountsDb implementation, an account may remain
-        // in storage as a zero-lamport AccountSharedData::Default() after being wiped and reinitialized in
+        // in storage as a zero-carat AccountSharedData::Default() after being wiped and reinitialized in
         // later updates. We include the redundant filters here to avoid returning these accounts.
         //
         // Filter on Token Account state
@@ -1888,7 +1888,7 @@ impl JsonRpcRequestProcessor {
     ) -> RpcCustomResult<Vec<(Pubkey, AccountSharedData)>> {
         // The by-mint accounts index checks for Token Account state and Mint address on inclusion.
         // However, due to the current AccountsDb implementation, an account may remain in storage
-        // as be zero-lamport AccountSharedData::Default() after being wiped and reinitialized in later
+        // as be zero-carat AccountSharedData::Default() after being wiped and reinitialized in later
         // updates. We include the redundant filters here to avoid returning these accounts.
         //
         // Filter on Token Account state
@@ -4256,7 +4256,7 @@ pub mod tests {
         std::collections::HashMap,
     };
 
-    const TEST_MINT_LAMPORTS: u64 = 1_000_000;
+    const TEST_MINT_CARATS: u64 = 1_000_000;
     const TEST_SLOTS_PER_EPOCH: u64 = DELINQUENT_VALIDATOR_SLOT_DISTANCE + 1;
 
     struct RpcHandler {
@@ -4689,8 +4689,8 @@ pub mod tests {
         let supply: RpcSupply = serde_json::from_value(json["result"]["value"].clone())
             .expect("actual response deserialization");
         assert_eq!(supply.non_circulating, 20);
-        assert!(supply.circulating >= TEST_MINT_LAMPORTS);
-        assert!(supply.total >= TEST_MINT_LAMPORTS + 20);
+        assert!(supply.circulating >= TEST_MINT_CARATS);
+        assert!(supply.total >= TEST_MINT_CARATS + 20);
         let expected_accounts: Vec<String> = non_circulating_accounts()
             .iter()
             .map(|pubkey| pubkey.to_string())
@@ -4714,8 +4714,8 @@ pub mod tests {
         let supply: RpcSupply = serde_json::from_value(json["result"]["value"].clone())
             .expect("actual response deserialization");
         assert_eq!(supply.non_circulating, 20);
-        assert!(supply.circulating >= TEST_MINT_LAMPORTS);
-        assert!(supply.total >= TEST_MINT_LAMPORTS + 20);
+        assert!(supply.circulating >= TEST_MINT_CARATS);
+        assert!(supply.total >= TEST_MINT_CARATS + 20);
         assert!(supply.non_circulating_accounts.is_empty());
     }
 
@@ -5930,9 +5930,9 @@ pub mod tests {
             "value":{
                 "feeRateGovernor": {
                     "burnPercent": DEFAULT_BURN_PERCENT,
-                    "maxLamportsPerSignature": 0,
-                    "minLamportsPerSignature": 0,
-                    "targetLamportsPerSignature": 0,
+                    "maxCaratsPerSignature": 0,
+                    "minCaratsPerSignature": 0,
+                    "targetCaratsPerSignature": 0,
                     "targetSignaturesPerSlot": 0
                 }
             }},
@@ -6183,7 +6183,7 @@ pub mod tests {
             mut genesis_config,
             mint_keypair,
             voting_keypair,
-        } = create_genesis_config(TEST_MINT_LAMPORTS);
+        } = create_genesis_config(TEST_MINT_CARATS);
 
         genesis_config.rent.carats_per_byte_year = 50;
         genesis_config.rent.exemption_threshold = 2.0;

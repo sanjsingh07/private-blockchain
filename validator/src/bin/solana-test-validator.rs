@@ -44,7 +44,7 @@ use {
  */
 const DEFAULT_MAX_LEDGER_SHREDS: u64 = 10_000;
 
-const DEFAULT_FAUCET_SOL: f64 = 1_000_000.;
+const DEFAULT_FAUCET_GEMA: f64 = 1_000_000.;
 
 #[derive(PartialEq)]
 enum Output {
@@ -57,7 +57,7 @@ fn main() {
     let default_rpc_port = rpc_port::DEFAULT_RPC_PORT.to_string();
     let default_faucet_port = FAUCET_PORT.to_string();
     let default_limit_ledger_size = DEFAULT_MAX_LEDGER_SHREDS.to_string();
-    let default_faucet_sol = DEFAULT_FAUCET_SOL.to_string();
+    let default_faucet_gema = DEFAULT_FAUCET_GEMA.to_string();
 
     let matches = App::new("solana-test-validator")
         .about("Test Validator")
@@ -270,11 +270,11 @@ fn main() {
                 .help("Keep this amount of shreds in root slots."),
         )
         .arg(
-            Arg::with_name("faucet_sol")
-                .long("faucet-sol")
+            Arg::with_name("faucet_gema")
+                .long("faucet-gema")
                 .takes_value(true)
                 .value_name("GEMA")
-                .default_value(default_faucet_sol.as_str())
+                .default_value(default_faucet_gema.as_str())
                 .help(
                     "Give the faucet address this much GEMA in genesis. \
                      If the ledger already exists then this parameter is silently ignored",
@@ -449,7 +449,7 @@ fn main() {
         None
     };
 
-    let faucet_carats = gema_to_carats(value_of(&matches, "faucet_sol").unwrap());
+    let faucet_carats = gema_to_carats(value_of(&matches, "faucet_gema").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
     if !faucet_keypair_file.exists() {
         write_keypair_file(&Keypair::new(), faucet_keypair_file.to_str().unwrap()).unwrap_or_else(
@@ -490,7 +490,7 @@ fn main() {
             ("clone_account", "--clone"),
             ("mint_address", "--mint"),
             ("slots_per_epoch", "--slots-per-epoch"),
-            ("faucet_sol", "--faucet-sol"),
+            ("faucet_gema", "--faucet-gema"),
         ] {
             if matches.is_present(name) {
                 println!("{} argument ignored, ledger already exists", long);

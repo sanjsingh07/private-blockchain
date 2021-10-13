@@ -91,7 +91,7 @@ use solana_sdk::{
     incinerator,
     inflation::Inflation,
     instruction::{CompiledInstruction, InstructionError},
-    carats::LamportsError,
+    carats::CaratsError,
     message::SanitizedMessage,
     native_loader,
     native_token::gema_to_carats,
@@ -2103,7 +2103,7 @@ impl Bank {
     }
 
     /// iterate over all stakes, redeem vote credits for each stake we can
-    ///   successfully load and parse, return the lamport value of one point
+    ///   successfully load and parse, return the carat value of one point
     fn pay_validator_rewards(
         &mut self,
         rewarded_epoch: Epoch,
@@ -2378,7 +2378,7 @@ impl Bank {
         flush.stop();
 
         let mut clean = Measure::start("clean");
-        // Don't clean the slot we're snapshotting because it may have zero-lamport
+        // Don't clean the slot we're snapshotting because it may have zero-carat
         // accounts that were included in the bank delta hash when the bank was frozen,
         // and if we clean them here, any newly created snapshot's hash for this bank
         // may not match the frozen hash.
@@ -4552,7 +4552,7 @@ impl Bank {
         &self,
         pubkey: &Pubkey,
         carats: u64,
-    ) -> std::result::Result<u64, LamportsError> {
+    ) -> std::result::Result<u64, CaratsError> {
         // This doesn't collect rents intentionally.
         // Rents should only be applied to actual TXes
         let mut account = self.get_account_with_fixed_root(pubkey).unwrap_or_default();
@@ -5047,7 +5047,7 @@ impl Bank {
         self.update_accounts_hash_with_index_option(true, false, None)
     }
 
-    /// A snapshot bank should be purged of 0 lamport accounts which are not part of the hash
+    /// A snapshot bank should be purged of 0 carat accounts which are not part of the hash
     /// calculation and could shield other real accounts.
     pub fn verify_snapshot_bank(
         &self,
@@ -5330,7 +5330,7 @@ impl Bank {
         is_startup: bool,
         last_full_snapshot_slot: Option<Slot>,
     ) {
-        // Don't clean the slot we're snapshotting because it may have zero-lamport
+        // Don't clean the slot we're snapshotting because it may have zero-carat
         // accounts that were included in the bank delta hash when the bank was frozen,
         // and if we clean them here, any newly created snapshot's hash for this bank
         // may not match the frozen hash.
@@ -5485,7 +5485,7 @@ impl Bank {
         if new_feature_activations.contains(&feature_set::rent_for_sysvars::id()) {
             // when this feature is activated, immediately all of existing sysvars are susceptible
             // to rent collection and account data removal due to insufficient balance due to only
-            // having 1 lamport.
+            // having 1 carat.
             // so before any is accessed, reset the balance to be rent-exempt here at the same
             // timing when perpetual balance adjustment is started in update_sysvar_account().
             self.reset_all_sysvar_balances();
@@ -5693,7 +5693,7 @@ impl Bank {
                     if reward_account.carats() == u64::MAX {
                         reward_account.set_carats(0);
                         self.store_account(reward_pubkey, &reward_account);
-                        // Adjust capitalization.... it has been wrapping, reducing the real capitalization by 1-lamport
+                        // Adjust capitalization.... it has been wrapping, reducing the real capitalization by 1-carat
                         self.capitalization.fetch_add(1, Relaxed);
                         info!(
                             "purged rewards pool accont: {}, new capitalization: {}",
@@ -6594,7 +6594,7 @@ pub(crate) mod tests {
 
         let bootstrap_validator_portion =
             ((bootstrap_validator_stake_carats * rent_to_be_distributed) as f64 / 100.0) as u64
-                + 1; // Leftover lamport
+                + 1; // Leftover carat
         assert_eq!(
             bank.get_balance(&bootstrap_validator_pubkey),
             bootstrap_validator_portion + bootstrap_validator_initial_balance
@@ -6749,7 +6749,7 @@ pub(crate) mod tests {
             bank.process_transaction(&tx),
             Err(TransactionError::InstructionError(
                 0,
-                InstructionError::ExecutableLamportChange
+                InstructionError::ExecutableCaratChange
             ))
         );
         assert_eq!(bank.get_balance(&account_pubkey), account_balance);
@@ -7566,7 +7566,7 @@ pub(crate) mod tests {
         let (mut genesis_config, _mint_keypair) = create_genesis_config(1);
         activate_all_features(&mut genesis_config);
 
-        let zero_lamport_pubkey = solana_sdk::pubkey::new_rand();
+        let zero_carat_pubkey = solana_sdk::pubkey::new_rand();
         let rent_due_pubkey = solana_sdk::pubkey::new_rand();
         let rent_exempt_pubkey = solana_sdk::pubkey::new_rand();
 
@@ -7577,7 +7577,7 @@ pub(crate) mod tests {
         let rent_collected = 22;
 
         bank.store_account(
-            &zero_lamport_pubkey,
+            &zero_carat_pubkey,
             &AccountSharedData::new(zero_carats, 0, &Pubkey::default()),
         );
         bank.store_account(
@@ -7610,13 +7610,13 @@ pub(crate) mod tests {
             vec![genesis_slot]
         );
         assert_eq!(
-            bank.slots_by_pubkey(&zero_lamport_pubkey, &ancestors),
+            bank.slots_by_pubkey(&zero_carat_pubkey, &ancestors),
             vec![genesis_slot]
         );
 
         bank.collect_rent_in_partition((0, 0, 1)); // all range
 
-        // unrelated 1-lamport accounts exists
+        // unrelated 1-carat accounts exists
         assert_eq!(bank.collected_rent.load(Relaxed), rent_collected + 2);
         assert_eq!(
             bank.get_account(&rent_due_pubkey).unwrap().carats(),
@@ -7640,18 +7640,18 @@ pub(crate) mod tests {
             vec![genesis_slot, some_slot]
         );
         assert_eq!(
-            bank.slots_by_pubkey(&zero_lamport_pubkey, &ancestors),
+            bank.slots_by_pubkey(&zero_carat_pubkey, &ancestors),
             vec![genesis_slot]
         );
     }
 
     #[test]
-    fn test_rent_eager_collect_rent_zero_lamport_deterministic() {
+    fn test_rent_eager_collect_rent_zero_carat_deterministic() {
         solana_logger::setup();
 
         let (genesis_config, _mint_keypair) = create_genesis_config(1);
 
-        let zero_lamport_pubkey = solana_sdk::pubkey::new_rand();
+        let zero_carat_pubkey = solana_sdk::pubkey::new_rand();
 
         let genesis_bank1 = Arc::new(Bank::new_for_tests(&genesis_config));
         let genesis_bank2 = Arc::new(Bank::new_for_tests(&genesis_config));
@@ -7660,8 +7660,8 @@ pub(crate) mod tests {
         let zero_carats = 0;
 
         let account = AccountSharedData::new(zero_carats, 0, &Pubkey::default());
-        bank1_with_zero.store_account(&zero_lamport_pubkey, &account);
-        bank1_without_zero.store_account(&zero_lamport_pubkey, &account);
+        bank1_with_zero.store_account(&zero_carat_pubkey, &account);
+        bank1_without_zero.store_account(&zero_carat_pubkey, &account);
 
         bank1_without_zero
             .rc
@@ -7674,7 +7674,7 @@ pub(crate) mod tests {
             .accounts
             .accounts_db
             .accounts_index
-            .purge_roots(&zero_lamport_pubkey);
+            .purge_roots(&zero_carat_pubkey);
 
         let some_slot = 1000;
         let bank2_with_zero = Arc::new(Bank::new_from_parent(
@@ -8061,7 +8061,7 @@ pub(crate) mod tests {
         let tx = Transaction::new(&[&mint_keypair], message, genesis_config.hash());
         assert_eq!(
             bank.process_transaction(&tx).unwrap_err(),
-            TransactionError::InstructionError(1, SystemError::ResultWithNegativeLamports.into())
+            TransactionError::InstructionError(1, SystemError::ResultWithNegativeCarats.into())
         );
         assert_eq!(bank.get_balance(&mint_keypair.pubkey()), 1);
         assert_eq!(bank.get_balance(&key1), 0);
@@ -8103,7 +8103,7 @@ pub(crate) mod tests {
             bank.process_transaction(&tx),
             Err(TransactionError::InstructionError(
                 0,
-                SystemError::ResultWithNegativeLamports.into(),
+                SystemError::ResultWithNegativeCarats.into(),
             ))
         );
 
@@ -8139,7 +8139,7 @@ pub(crate) mod tests {
             bank.transfer(10_001, &mint_keypair, &pubkey),
             Err(TransactionError::InstructionError(
                 0,
-                SystemError::ResultWithNegativeLamports.into(),
+                SystemError::ResultWithNegativeCarats.into(),
             ))
         );
         assert_eq!(bank.transaction_count(), 1);
@@ -8449,7 +8449,7 @@ pub(crate) mod tests {
             (
                 Err(TransactionError::InstructionError(
                     1,
-                    SystemError::ResultWithNegativeLamports.into(),
+                    SystemError::ResultWithNegativeCarats.into(),
                 )),
                 None,
             ),
@@ -9644,7 +9644,7 @@ pub(crate) mod tests {
             bank.transfer(10_001, &mint_keypair, &solana_sdk::pubkey::new_rand()),
             Err(TransactionError::InstructionError(
                 0,
-                SystemError::ResultWithNegativeLamports.into(),
+                SystemError::ResultWithNegativeCarats.into(),
             ))
         );
 
@@ -10424,7 +10424,7 @@ pub(crate) mod tests {
             bank.process_transaction(&durable_tx),
             Err(TransactionError::InstructionError(
                 1,
-                system_instruction::SystemError::ResultWithNegativeLamports.into(),
+                system_instruction::SystemError::ResultWithNegativeCarats.into(),
             ))
         );
         /* Check fee charged and nonce has advanced */
@@ -10543,7 +10543,7 @@ pub(crate) mod tests {
             bank.process_transaction(&durable_tx),
             Err(TransactionError::InstructionError(
                 1,
-                system_instruction::SystemError::ResultWithNegativeLamports.into(),
+                system_instruction::SystemError::ResultWithNegativeCarats.into(),
             ))
         );
         /* Check fee charged and nonce has advanced */
@@ -11906,7 +11906,7 @@ pub(crate) mod tests {
         );
         let bank0 = Bank::new_for_tests(&genesis_config);
         // because capitalization has been reset with bogus capitalization calculation allowing overflows,
-        // deliberately substract 1 lamport to simulate it
+        // deliberately substract 1 carat to simulate it
         bank0.capitalization.fetch_sub(1, Relaxed);
         let bank0 = Arc::new(bank0);
         assert_eq!(bank0.get_balance(&reward_pubkey), u64::MAX,);
@@ -14027,7 +14027,7 @@ pub(crate) mod tests {
             bank.process_transaction(&tx),
             Err(TransactionError::InstructionError(
                 0,
-                InstructionError::ReadonlyLamportChange
+                InstructionError::ReadonlyCaratChange
             ))
         );
         assert_eq!(

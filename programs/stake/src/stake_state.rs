@@ -272,7 +272,7 @@ fn calculate_stake_points_and_credits(
 ///   * staker_rewards to be distributed
 ///   * voter_rewards to be distributed
 ///   * new value for credits_observed in the stake
-/// returns None if there's no payout or if any deserved payout is < 1 lamport
+/// returns None if there's no payout or if any deserved payout is < 1 carat
 fn calculate_stake_rewards(
     rewarded_epoch: Epoch,
     stake: &Stake,
@@ -336,7 +336,7 @@ fn calculate_stake_rewards(
     }
 
     if (voter_rewards == 0 || staker_rewards == 0) && is_split {
-        // don't collect if we lose a whole lamport somewhere
+        // don't collect if we lose a whole carat somewhere
         //  is_split means there should be tokens on both sides,
         //  uncool to move credits_observed if one side didn't get paid
         return None;
@@ -629,7 +629,7 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
                         == self.carats()?
                     {
                         // If split amount equals the full source stake, the new split stake must
-                        // equal the same amount, regardless of any current lamport balance in the
+                        // equal the same amount, regardless of any current carat balance in the
                         // split account. Since split accounts retain the state of their source
                         // account, this prevents any magic activation of stake by prefunding the
                         // split account.
@@ -4349,7 +4349,7 @@ mod tests {
                 stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
                 Ok(())
             );
-            // no lamport leakage
+            // no carat leakage
             assert_eq!(
                 stake_keyed_account.account.borrow().carats()
                     + split_stake_keyed_account.account.borrow().carats(),
@@ -4454,8 +4454,8 @@ mod tests {
         // Test various account prefunding, including empty, less than rent_exempt_reserve, exactly
         // rent_exempt_reserve, and more than rent_exempt_reserve. The empty case is not covered in
         // test_split, since that test uses a Meta with rent_exempt_reserve = 0
-        let split_lamport_balances = vec![0, 1, rent_exempt_reserve, rent_exempt_reserve + 1];
-        for initial_balance in split_lamport_balances {
+        let split_carat_balances = vec![0, 1, rent_exempt_reserve, rent_exempt_reserve + 1];
+        for initial_balance in split_carat_balances {
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
                 initial_balance,
                 &StakeState::Uninitialized,
@@ -4487,7 +4487,7 @@ mod tests {
                 stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
                 Ok(())
             );
-            // no lamport leakage
+            // no carat leakage
             assert_eq!(
                 stake_keyed_account.account.borrow().carats()
                     + split_stake_keyed_account.account.borrow().carats(),
@@ -4561,13 +4561,13 @@ mod tests {
         // Test various account prefunding, including empty, less than rent_exempt_reserve, exactly
         // rent_exempt_reserve, and more than rent_exempt_reserve. The empty case is not covered in
         // test_split, since that test uses a Meta with rent_exempt_reserve = 0
-        let split_lamport_balances = vec![
+        let split_carat_balances = vec![
             0,
             1,
             expected_rent_exempt_reserve,
             expected_rent_exempt_reserve + 1,
         ];
-        for initial_balance in split_lamport_balances {
+        for initial_balance in split_carat_balances {
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
                 initial_balance,
                 &StakeState::Uninitialized,
@@ -4599,7 +4599,7 @@ mod tests {
                 stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
                 Ok(())
             );
-            // no lamport leakage
+            // no carat leakage
             assert_eq!(
                 stake_keyed_account.account.borrow().carats()
                     + split_stake_keyed_account.account.borrow().carats(),
@@ -4676,13 +4676,13 @@ mod tests {
 
         let state = StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve));
 
-        let split_lamport_balances = vec![
+        let split_carat_balances = vec![
             0,
             1,
             expected_rent_exempt_reserve,
             expected_rent_exempt_reserve + 1,
         ];
-        for initial_balance in split_lamport_balances {
+        for initial_balance in split_carat_balances {
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
                 initial_balance,
                 &StakeState::Uninitialized,
@@ -4762,7 +4762,7 @@ mod tests {
                 Ok(())
             );
 
-            // no lamport leakage
+            // no carat leakage
             assert_eq!(
                 stake_keyed_account.account.borrow().carats()
                     + split_stake_keyed_account.account.borrow().carats(),
@@ -4821,8 +4821,8 @@ mod tests {
         // Test various account prefunding, including empty, less than rent_exempt_reserve, exactly
         // rent_exempt_reserve, and more than rent_exempt_reserve. Technically, the empty case is
         // covered in test_split_100_percent_of_source, but included here as well for readability
-        let split_lamport_balances = vec![0, 1, rent_exempt_reserve, rent_exempt_reserve + 1];
-        for initial_balance in split_lamport_balances {
+        let split_carat_balances = vec![0, 1, rent_exempt_reserve, rent_exempt_reserve + 1];
+        for initial_balance in split_carat_balances {
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
                 initial_balance,
                 &StakeState::Uninitialized,
@@ -4849,7 +4849,7 @@ mod tests {
                 Ok(())
             );
 
-            // no lamport leakage
+            // no carat leakage
             assert_eq!(
                 stake_keyed_account.account.borrow().carats()
                     + split_stake_keyed_account.account.borrow().carats(),
@@ -5646,7 +5646,7 @@ mod tests {
         panic!(
             "stake minimum_balance: {} carats, {} GEMA",
             minimum_balance,
-            minimum_balance as f64 / solana_sdk::native_token::LAMPORTS_PER_GEMA as f64
+            minimum_balance as f64 / solana_sdk::native_token::CARATS_PER_GEMA as f64
         );
     }
 

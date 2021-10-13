@@ -651,7 +651,7 @@ fn check_vote_account(
         ));
     }
 
-    // Maybe we can calculate minimum voting fee; rather than 1 lamport
+    // Maybe we can calculate minimum voting fee; rather than 1 carat
     if identity_account.carats <= 1 {
         return Err(format!(
             "underfunded identity account ({}): only {} carats available",

@@ -3,7 +3,7 @@ use crate::{
     cli::CliError,
 };
 use clap::ArgMatches;
-use solana_clap_utils::{input_parsers::carats_of_sol, offline::SIGN_ONLY_ARG};
+use solana_clap_utils::{input_parsers::carats_of_gema, offline::SIGN_ONLY_ARG};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig, hash::Hash, message::Message,
@@ -32,7 +32,7 @@ impl SpendAmount {
     }
 
     pub fn new_from_matches(matches: &ArgMatches<'_>, name: &str) -> Self {
-        let amount = carats_of_sol(matches, name);
+        let amount = carats_of_gema(matches, name);
         let sign_only = matches.is_present(SIGN_ONLY_ARG.name);
         SpendAmount::new(amount, sign_only)
     }

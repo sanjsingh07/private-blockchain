@@ -174,7 +174,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             Arg::with_name("faucet_carats")
                 .short("t")
                 .long("faucet-carats")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .help("Number of carats to assign to the faucet"),
         )
@@ -203,7 +203,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .arg(
             Arg::with_name("bootstrap_validator_carats")
                 .long("bootstrap-validator-carats")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .default_value(default_bootstrap_validator_carats)
                 .help("Number of carats to assign to the bootstrap validator"),
@@ -211,7 +211,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .arg(
             Arg::with_name("bootstrap_validator_stake_carats")
                 .long("bootstrap-validator-stake-carats")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .default_value(default_bootstrap_validator_stake_carats)
                 .help("Number of carats to assign to the bootstrap validator's stake account"),
@@ -219,7 +219,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .arg(
             Arg::with_name("target_carats_per_signature")
                 .long("target-carats-per-signature")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .default_value(default_target_carats_per_signature)
                 .help(
@@ -230,7 +230,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .arg(
             Arg::with_name("carats_per_byte_year")
                 .long("carats-per-byte-year")
-                .value_name("LAMPORTS")
+                .value_name("CARATS")
                 .takes_value(true)
                 .default_value(default_carats_per_byte_year)
                 .help(
