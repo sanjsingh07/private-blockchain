@@ -125,8 +125,8 @@ pub fn sol_log_params(accounts: &[AccountInfo], data: &[u8]) {
         msg!(0, 0, 0, 0, account.is_signer);
         msg!("- Key");
         account.key.log();
-        msg!("- Lamports");
-        msg!(0, 0, 0, 0, account.lamports());
+        msg!("- Carats");
+        msg!(0, 0, 0, 0, account.carats());
         msg!("- Account data length");
         msg!(0, 0, 0, 0, account.data_len());
         msg!("- Owner");

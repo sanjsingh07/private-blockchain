@@ -5,7 +5,7 @@ use solana_client::{
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig, hash::Hash, message::Message,
-    native_token::lamports_to_gema, pubkey::Pubkey,
+    native_token::carats_to_gema, pubkey::Pubkey,
 };
 
 pub fn check_account_for_fee(
@@ -84,13 +84,13 @@ pub fn check_account_for_spend_multiple_fees_with_commitment(
     {
         if balance > 0 {
             return Err(CliError::InsufficientFundsForSpendAndFee(
-                lamports_to_gema(balance),
-                lamports_to_gema(fee),
+                carats_to_gema(balance),
+                carats_to_gema(fee),
                 *account_pubkey,
             ));
         } else {
             return Err(CliError::InsufficientFundsForFee(
-                lamports_to_gema(fee),
+                carats_to_gema(fee),
                 *account_pubkey,
             ));
         }
@@ -130,10 +130,10 @@ pub fn check_account_for_balance_with_commitment(
     balance: u64,
     commitment: CommitmentConfig,
 ) -> ClientResult<bool> {
-    let lamports = rpc_client
+    let carats = rpc_client
         .get_balance_with_commitment(account_pubkey, commitment)?
         .value;
-    if lamports != 0 && lamports >= balance {
+    if carats != 0 && carats >= balance {
         return Ok(true);
     }
     Ok(false)

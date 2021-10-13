@@ -164,13 +164,13 @@ mod tests {
         let key = crate::sysvar::tests::id();
         let wrong_key = Pubkey::new_unique();
         let owner = Pubkey::new_unique();
-        let mut lamports = 42;
+        let mut carats = 42;
         let mut data = vec![0_u8; TestSysvar::size_of()];
         let mut account_info = AccountInfo::new(
             &key,
             false,
             true,
-            &mut lamports,
+            &mut carats,
             &mut data,
             &owner,
             false,

@@ -416,12 +416,12 @@ fn process_activate(
         SpendAmount::Some(rent),
         &blockhash,
         &config.signers[0].pubkey(),
-        |lamports| {
+        |carats| {
             Message::new(
-                &feature::activate_with_lamports(
+                &feature::activate_with_carats(
                     &feature_id,
                     &config.signers[0].pubkey(),
-                    lamports,
+                    carats,
                 ),
                 Some(&config.signers[0].pubkey()),
             )

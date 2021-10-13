@@ -32,7 +32,7 @@ use {
     },
     solana_sdk::{
         exit::Exit, genesis_config::DEFAULT_GENESIS_DOWNLOAD_PATH, hash::Hash,
-        native_token::lamports_to_gema, pubkey::Pubkey,
+        native_token::carats_to_gema, pubkey::Pubkey,
     },
     solana_send_transaction_service::send_transaction_service::SendTransactionService,
     std::{
@@ -264,17 +264,17 @@ fn process_rest(bank_forks: &Arc<RwLock<BankForks>>, path: &str) -> Option<Strin
             let non_circulating_supply =
                 solana_runtime::non_circulating_supply::calculate_non_circulating_supply(&bank)
                     .expect("Scan should not error on root banks")
-                    .lamports;
+                    .carats;
             Some(format!(
                 "{}",
-                lamports_to_gema(total_supply - non_circulating_supply)
+                carats_to_gema(total_supply - non_circulating_supply)
             ))
         }
         "/v0/total-supply" => {
             let r_bank_forks = bank_forks.read().unwrap();
             let bank = r_bank_forks.root_bank();
             let total_supply = bank.capitalization();
-            Some(format!("{}", lamports_to_gema(total_supply)))
+            Some(format!("{}", carats_to_gema(total_supply)))
         }
         _ => None,
     }

@@ -52,7 +52,7 @@ impl RentCollector {
         }
     }
 
-    // updates this account's lamports and status and returns
+    // updates this account's carats and status and returns
     //  the account rent collected, if any
     // This is NOT thread safe at some level. If we try to collect from the same account in parallel, we may collect twice.
     #[must_use = "add to Bank::collected_rent"]
@@ -82,10 +82,10 @@ impl RentCollector {
 
             let (rent_due, exempt) =
                 self.rent
-                    .due(account.lamports(), account.data().len(), years_elapsed);
+                    .due(account.carats(), account.data().len(), years_elapsed);
 
             if exempt || rent_due != 0 {
-                if account.lamports() > rent_due {
+                if account.carats() > rent_due {
                     account.set_rent_epoch(
                         self.epoch
                             + if exempt {
@@ -97,10 +97,10 @@ impl RentCollector {
                                 1
                             },
                     );
-                    let _ = account.checked_sub_lamports(rent_due); // will not fail. We check above.
+                    let _ = account.checked_sub_carats(rent_due); // will not fail. We check above.
                     rent_due
                 } else {
-                    let rent_charged = account.lamports();
+                    let rent_charged = account.carats();
                     *account = AccountSharedData::default();
                     rent_charged
                 }
@@ -131,13 +131,13 @@ mod tests {
 
     #[test]
     fn test_collect_from_account_created_and_existing() {
-        let old_lamports = 1000;
+        let old_carats = 1000;
         let old_epoch = 1;
         let new_epoch = 3;
 
         let (mut created_account, mut existing_account) = {
             let account = AccountSharedData::from(Account {
-                lamports: old_lamports,
+                carats: old_carats,
                 rent_epoch: old_epoch,
                 ..Account::default()
             });
@@ -153,8 +153,8 @@ mod tests {
             &mut created_account,
             true,
         );
-        assert!(created_account.lamports() < old_lamports);
-        assert_eq!(created_account.lamports() + collected, old_lamports);
+        assert!(created_account.carats() < old_carats);
+        assert_eq!(created_account.carats() + collected, old_carats);
         assert_ne!(created_account.rent_epoch(), old_epoch);
 
         // collect rent on a already-existing account
@@ -163,12 +163,12 @@ mod tests {
             &mut existing_account,
             true,
         );
-        assert!(existing_account.lamports() < old_lamports);
-        assert_eq!(existing_account.lamports() + collected, old_lamports);
+        assert!(existing_account.carats() < old_carats);
+        assert_eq!(existing_account.carats() + collected, old_carats);
         assert_ne!(existing_account.rent_epoch(), old_epoch);
 
         // newly created account should be collected for less rent; thus more remaining balance
-        assert!(created_account.lamports() > existing_account.lamports());
+        assert!(created_account.carats() > existing_account.carats());
         assert_eq!(created_account.rent_epoch(), existing_account.rent_epoch());
     }
 
@@ -176,12 +176,12 @@ mod tests {
     fn test_rent_exempt_temporal_escape() {
         let mut account = AccountSharedData::default();
         let epoch = 3;
-        let huge_lamports = 123_456_789_012;
-        let tiny_lamports = 789_012;
+        let huge_carats = 123_456_789_012;
+        let tiny_carats = 789_012;
         let mut collected;
         let pubkey = solana_sdk::pubkey::new_rand();
 
-        account.set_lamports(huge_lamports);
+        account.set_carats(huge_carats);
         assert_eq!(account.rent_epoch(), 0);
 
         // create a tested rent collector
@@ -189,24 +189,24 @@ mod tests {
 
         // first mark account as being collected while being rent-exempt
         collected = rent_collector.collect_from_existing_account(&pubkey, &mut account, true);
-        assert_eq!(account.lamports(), huge_lamports);
+        assert_eq!(account.carats(), huge_carats);
         assert_eq!(collected, 0);
 
         // decrease the balance not to be rent-exempt
-        account.set_lamports(tiny_lamports);
+        account.set_carats(tiny_carats);
 
         // ... and trigger another rent collection on the same epoch and check that rent is working
         collected = rent_collector.collect_from_existing_account(&pubkey, &mut account, true);
-        assert_eq!(account.lamports(), tiny_lamports - collected);
+        assert_eq!(account.carats(), tiny_carats - collected);
         assert_ne!(collected, 0);
     }
 
     #[test]
     fn test_rent_exempt_sysvar() {
-        let tiny_lamports = 1;
+        let tiny_carats = 1;
         let mut account = AccountSharedData::default();
         account.set_owner(sysvar::id());
-        account.set_lamports(tiny_lamports);
+        account.set_carats(tiny_carats);
 
         let pubkey = solana_sdk::pubkey::new_rand();
 
@@ -217,12 +217,12 @@ mod tests {
 
         // old behavior: sysvars are special-cased
         let collected = rent_collector.collect_from_existing_account(&pubkey, &mut account, false);
-        assert_eq!(account.lamports(), tiny_lamports);
+        assert_eq!(account.carats(), tiny_carats);
         assert_eq!(collected, 0);
 
         // new behavior: sysvars are NOT special-cased
         let collected = rent_collector.collect_from_existing_account(&pubkey, &mut account, true);
-        assert_eq!(account.lamports(), 0);
+        assert_eq!(account.carats(), 0);
         assert_eq!(collected, 1);
     }
 }

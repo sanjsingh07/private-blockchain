@@ -3596,9 +3596,9 @@ pub mod tests {
         }
 
         let leader_pubkey = solana_sdk::pubkey::new_rand();
-        let leader_lamports = 3;
+        let leader_carats = 3;
         let genesis_config_info =
-            create_genesis_config_with_leader(50, &leader_pubkey, leader_lamports);
+            create_genesis_config_with_leader(50, &leader_pubkey, leader_carats);
         let mut genesis_config = genesis_config_info.genesis_config;
         let leader_voting_pubkey = genesis_config_info.voting_keypair.pubkey();
         genesis_config.epoch_schedule.warmup = false;
@@ -3653,7 +3653,7 @@ pub mod tests {
             ReplayStage::update_commitment_cache(
                 arc_bank.clone(),
                 0,
-                leader_lamports,
+                leader_carats,
                 &lockouts_sender,
             );
             arc_bank.freeze();
@@ -3674,7 +3674,7 @@ pub mod tests {
         }
 
         let mut expected0 = BlockCommitment::default();
-        expected0.increase_confirmation_stake(3, leader_lamports);
+        expected0.increase_confirmation_stake(3, leader_carats);
         assert_eq!(
             block_commitment_cache
                 .read()
@@ -3684,7 +3684,7 @@ pub mod tests {
             &expected0,
         );
         let mut expected1 = BlockCommitment::default();
-        expected1.increase_confirmation_stake(2, leader_lamports);
+        expected1.increase_confirmation_stake(2, leader_carats);
         assert_eq!(
             block_commitment_cache
                 .read()
@@ -3694,7 +3694,7 @@ pub mod tests {
             &expected1
         );
         let mut expected2 = BlockCommitment::default();
-        expected2.increase_confirmation_stake(1, leader_lamports);
+        expected2.increase_confirmation_stake(1, leader_carats);
         assert_eq!(
             block_commitment_cache
                 .read()

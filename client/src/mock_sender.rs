@@ -288,7 +288,7 @@ impl RpcSender for MockSender {
             "getLargestAccounts" => {
                 let rpc_account_balance = RpcAccountBalance {
                     address: PUBKEY.to_string(),
-                    lamports: 10000,
+                    carats: 10000,
                 };
 
                 json!(Response {

@@ -134,14 +134,14 @@ impl PreAccount {
 
         // An account not assigned to the program cannot have its balance decrease.
         if program_id != pre.owner() // line coverage used to get branch coverage
-         && pre.lamports() > post.lamports()
+         && pre.carats() > post.carats()
         {
             return Err(InstructionError::ExternalAccountLamportSpend);
         }
 
         // The balance of read-only and executable accounts may not change
-        let lamports_changed = pre.lamports() != post.lamports();
-        if lamports_changed {
+        let carats_changed = pre.carats() != post.carats();
+        if carats_changed {
             if !is_writable {
                 return Err(InstructionError::ReadonlyLamportChange);
             }
@@ -180,7 +180,7 @@ impl PreAccount {
         // executable is one-way (false->true) and only the account owner may set it.
         let executable_changed = pre.executable() != post.executable();
         if executable_changed {
-            if !rent.is_exempt(post.lamports(), post.data().len()) {
+            if !rent.is_exempt(post.carats(), post.data().len()) {
                 return Err(InstructionError::ExecutableAccountNotRentExempt);
             }
             if !is_writable // line coverage used to get branch coverage
@@ -201,7 +201,7 @@ impl PreAccount {
             timings.total_account_count += 1;
             timings.total_data_size += post.data().len();
             if owner_changed
-                || lamports_changed
+                || carats_changed
                 || data_len_changed
                 || executable_changed
                 || rent_epoch_changed
@@ -232,8 +232,8 @@ impl PreAccount {
         Ref::map(self.account.borrow(), |account| account.data())
     }
 
-    pub fn lamports(&self) -> u64 {
-        self.account.borrow().lamports()
+    pub fn carats(&self) -> u64 {
+        self.account.borrow().carats()
     }
 
     pub fn executable(&self) -> bool {
@@ -658,14 +658,14 @@ mod tests {
                     &solana_sdk::pubkey::new_rand(),
                     &AccountSharedData::from(Account {
                         owner: *owner,
-                        lamports: std::u64::MAX,
+                        carats: std::u64::MAX,
                         data: vec![],
                         ..Account::default()
                     }),
                 ),
                 post: AccountSharedData::from(Account {
                     owner: *owner,
-                    lamports: std::u64::MAX,
+                    carats: std::u64::MAX,
                     ..Account::default()
                 }),
             }
@@ -679,9 +679,9 @@ mod tests {
             self.post.set_executable(post);
             self
         }
-        pub fn lamports(mut self, pre: u64, post: u64) -> Self {
-            self.pre.account.borrow_mut().set_lamports(pre);
-            self.post.set_lamports(post);
+        pub fn carats(mut self, pre: u64, post: u64) -> Self {
+            self.pre.account.borrow_mut().set_carats(pre);
+            self.post.set_carats(post);
             self
         }
         pub fn owner(mut self, post: &Pubkey) -> Self {
@@ -837,33 +837,33 @@ mod tests {
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(true, true)
-                .lamports(1, 2)
+                .carats(1, 2)
                 .verify(),
             Err(InstructionError::ExecutableLamportChange),
-            "owner should not be able to add lamports once marked executable"
+            "owner should not be able to add carats once marked executable"
         );
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(true, true)
-                .lamports(1, 2)
+                .carats(1, 2)
                 .verify(),
             Err(InstructionError::ExecutableLamportChange),
-            "owner should not be able to add lamports once marked executable"
+            "owner should not be able to add carats once marked executable"
         );
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(true, true)
-                .lamports(2, 1)
+                .carats(2, 1)
                 .verify(),
             Err(InstructionError::ExecutableLamportChange),
-            "owner should not be able to subtract lamports once marked executable"
+            "owner should not be able to subtract carats once marked executable"
         );
         let data = vec![1; 100];
-        let min_lamports = Rent::default().minimum_balance(data.len());
+        let min_carats = Rent::default().minimum_balance(data.len());
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(false, true)
-                .lamports(0, min_lamports)
+                .carats(0, min_carats)
                 .data(data.clone(), data.clone())
                 .verify(),
             Ok(()),
@@ -871,7 +871,7 @@ mod tests {
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(false, true)
-                .lamports(0, min_lamports - 1)
+                .carats(0, min_carats - 1)
                 .data(data.clone(), data)
                 .verify(),
             Err(InstructionError::ExecutableAccountNotRentExempt),
@@ -947,7 +947,7 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_account_changes_deduct_lamports_and_reassign_account() {
+    fn test_verify_account_changes_deduct_carats_and_reassign_account() {
         let alice_program_id = solana_sdk::pubkey::new_rand();
         let bob_program_id = solana_sdk::pubkey::new_rand();
 
@@ -955,21 +955,21 @@ mod tests {
         assert_eq!(
             Change::new(&alice_program_id, &alice_program_id)
             .owner(&bob_program_id)
-            .lamports(42, 1)
+            .carats(42, 1)
             .data(vec![42], vec![0])
             .verify(),
         Ok(()),
-        "alice should be able to deduct lamports and give the account to bob if the data is zeroed",
+        "alice should be able to deduct carats and give the account to bob if the data is zeroed",
     );
     }
 
     #[test]
-    fn test_verify_account_changes_lamports() {
+    fn test_verify_account_changes_carats() {
         let alice_program_id = solana_sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id())
-                .lamports(42, 0)
+                .carats(42, 0)
                 .read_only()
                 .verify(),
             Err(InstructionError::ExternalAccountLamportSpend),
@@ -977,7 +977,7 @@ mod tests {
         );
         assert_eq!(
             Change::new(&alice_program_id, &alice_program_id)
-                .lamports(42, 0)
+                .carats(42, 0)
                 .read_only()
                 .verify(),
             Err(InstructionError::ReadonlyLamportChange),
@@ -985,7 +985,7 @@ mod tests {
         );
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id())
-                .lamports(42, 0)
+                .carats(42, 0)
                 .owner(&system_program::id())
                 .verify(),
             Err(InstructionError::ModifiedProgramId),
@@ -993,7 +993,7 @@ mod tests {
         );
         assert_eq!(
             Change::new(&system_program::id(), &system_program::id())
-                .lamports(42, 0)
+                .carats(42, 0)
                 .owner(&alice_program_id)
                 .verify(),
             Ok(()),

@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 const VALIDATOR_LAMPORTS: u64 = 42;
 
 // fun fact: rustc is very close to make this const fn.
-pub fn bootstrap_validator_stake_lamports() -> u64 {
+pub fn bootstrap_validator_stake_carats() -> u64 {
     StakeState::get_rent_exempt_reserve(&Rent::default())
 }
 
@@ -53,17 +53,17 @@ pub struct GenesisConfigInfo {
     pub voting_keypair: Keypair,
 }
 
-pub fn create_genesis_config(mint_lamports: u64) -> GenesisConfigInfo {
-    create_genesis_config_with_leader(mint_lamports, &solana_sdk::pubkey::new_rand(), 0)
+pub fn create_genesis_config(mint_carats: u64) -> GenesisConfigInfo {
+    create_genesis_config_with_leader(mint_carats, &solana_sdk::pubkey::new_rand(), 0)
 }
 
 pub fn create_genesis_config_with_vote_accounts(
-    mint_lamports: u64,
+    mint_carats: u64,
     voting_keypairs: &[impl Borrow<ValidatorVoteKeypairs>],
     stakes: Vec<u64>,
 ) -> GenesisConfigInfo {
     create_genesis_config_with_vote_accounts_and_cluster_type(
-        mint_lamports,
+        mint_carats,
         voting_keypairs,
         stakes,
         ClusterType::Development,
@@ -71,7 +71,7 @@ pub fn create_genesis_config_with_vote_accounts(
 }
 
 pub fn create_genesis_config_with_vote_accounts_and_cluster_type(
-    mint_lamports: u64,
+    mint_carats: u64,
     voting_keypairs: &[impl Borrow<ValidatorVoteKeypairs>],
     stakes: Vec<u64>,
     cluster_type: ClusterType,
@@ -84,7 +84,7 @@ pub fn create_genesis_config_with_vote_accounts_and_cluster_type(
         Keypair::from_bytes(&voting_keypairs[0].borrow().vote_keypair.to_bytes()).unwrap();
 
     let genesis_config = create_genesis_config_with_leader_ex(
-        mint_lamports,
+        mint_carats,
         &mint_keypair.pubkey(),
         &voting_keypairs[0].borrow().node_keypair.pubkey(),
         &voting_keypairs[0].borrow().vote_keypair.pubkey(),
@@ -133,20 +133,20 @@ pub fn create_genesis_config_with_vote_accounts_and_cluster_type(
 }
 
 pub fn create_genesis_config_with_leader(
-    mint_lamports: u64,
+    mint_carats: u64,
     validator_pubkey: &Pubkey,
-    validator_stake_lamports: u64,
+    validator_stake_carats: u64,
 ) -> GenesisConfigInfo {
     let mint_keypair = Keypair::new();
     let voting_keypair = Keypair::new();
 
     let genesis_config = create_genesis_config_with_leader_ex(
-        mint_lamports,
+        mint_carats,
         &mint_keypair.pubkey(),
         validator_pubkey,
         &voting_keypair.pubkey(),
         &solana_sdk::pubkey::new_rand(),
-        validator_stake_lamports,
+        validator_stake_carats,
         VALIDATOR_LAMPORTS,
         FeeRateGovernor::new(0, 0), // most tests can't handle transaction fees
         Rent::free(),               // most tests don't expect rent
@@ -178,13 +178,13 @@ pub fn activate_all_features(genesis_config: &mut GenesisConfig) {
 
 #[allow(clippy::too_many_arguments)]
 pub fn create_genesis_config_with_leader_ex(
-    mint_lamports: u64,
+    mint_carats: u64,
     mint_pubkey: &Pubkey,
     validator_pubkey: &Pubkey,
     validator_vote_account_pubkey: &Pubkey,
     validator_stake_account_pubkey: &Pubkey,
-    validator_stake_lamports: u64,
-    validator_lamports: u64,
+    validator_stake_carats: u64,
+    validator_carats: u64,
     fee_rate_governor: FeeRateGovernor,
     rent: Rent,
     cluster_type: ClusterType,
@@ -194,7 +194,7 @@ pub fn create_genesis_config_with_leader_ex(
         validator_vote_account_pubkey,
         validator_pubkey,
         0,
-        validator_stake_lamports,
+        validator_stake_carats,
     );
 
     let validator_stake_account = stake_state::create_account(
@@ -202,16 +202,16 @@ pub fn create_genesis_config_with_leader_ex(
         validator_vote_account_pubkey,
         &validator_vote_account,
         &rent,
-        validator_stake_lamports,
+        validator_stake_carats,
     );
 
     initial_accounts.push((
         *mint_pubkey,
-        AccountSharedData::new(mint_lamports, 0, &system_program::id()),
+        AccountSharedData::new(mint_carats, 0, &system_program::id()),
     ));
     initial_accounts.push((
         *validator_pubkey,
-        AccountSharedData::new(validator_lamports, 0, &system_program::id()),
+        AccountSharedData::new(validator_carats, 0, &system_program::id()),
     ));
     initial_accounts.push((*validator_vote_account_pubkey, validator_vote_account));
     initial_accounts.push((*validator_stake_account_pubkey, validator_stake_account));

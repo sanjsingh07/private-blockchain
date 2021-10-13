@@ -3,11 +3,11 @@ use crate::{
     cli::CliError,
 };
 use clap::ArgMatches;
-use solana_clap_utils::{input_parsers::lamports_of_sol, offline::SIGN_ONLY_ARG};
+use solana_clap_utils::{input_parsers::carats_of_sol, offline::SIGN_ONLY_ARG};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig, hash::Hash, message::Message,
-    native_token::lamports_to_gema, pubkey::Pubkey,
+    native_token::carats_to_gema, pubkey::Pubkey,
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -25,14 +25,14 @@ impl Default for SpendAmount {
 impl SpendAmount {
     pub fn new(amount: Option<u64>, sign_only: bool) -> Self {
         match amount {
-            Some(lamports) => Self::Some(lamports),
+            Some(carats) => Self::Some(carats),
             None if !sign_only => Self::All,
             _ => panic!("ALL amount not supported for sign-only operations"),
         }
     }
 
     pub fn new_from_matches(matches: &ArgMatches<'_>, name: &str) -> Self {
-        let amount = lamports_of_sol(matches, name);
+        let amount = carats_of_sol(matches, name);
         let sign_only = matches.is_present(SIGN_ONLY_ARG.name);
         SpendAmount::new(amount, sign_only)
     }
@@ -107,22 +107,22 @@ where
         if from_pubkey == fee_pubkey {
             if from_balance == 0 || from_balance < spend + fee {
                 return Err(CliError::InsufficientFundsForSpendAndFee(
-                    lamports_to_gema(spend),
-                    lamports_to_gema(fee),
+                    carats_to_gema(spend),
+                    carats_to_gema(fee),
                     *from_pubkey,
                 ));
             }
         } else {
             if from_balance < spend {
                 return Err(CliError::InsufficientFundsForSpend(
-                    lamports_to_gema(spend),
+                    carats_to_gema(spend),
                     *from_pubkey,
                 ));
             }
             if !check_account_for_balance_with_commitment(rpc_client, fee_pubkey, fee, commitment)?
             {
                 return Err(CliError::InsufficientFundsForFee(
-                    lamports_to_gema(fee),
+                    carats_to_gema(fee),
                     *fee_pubkey,
                 ));
             }
@@ -152,23 +152,23 @@ where
     };
 
     match amount {
-        SpendAmount::Some(lamports) => Ok((
-            build_message(lamports),
+        SpendAmount::Some(carats) => Ok((
+            build_message(carats),
             SpendAndFee {
-                spend: lamports,
+                spend: carats,
                 fee,
             },
         )),
         SpendAmount::All => {
-            let lamports = if from_pubkey == fee_pubkey {
+            let carats = if from_pubkey == fee_pubkey {
                 from_balance.saturating_sub(fee)
             } else {
                 from_balance
             };
             Ok((
-                build_message(lamports),
+                build_message(carats),
                 SpendAndFee {
-                    spend: lamports,
+                    spend: carats,
                     fee,
                 },
             ))

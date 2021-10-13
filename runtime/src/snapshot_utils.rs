@@ -2920,10 +2920,10 @@ mod tests {
     /// Here's the scenario:
     ///
     /// slot 1:
-    ///     - send some lamports to Account1 (from Account2) to bring it to life
+    ///     - send some carats to Account1 (from Account2) to bring it to life
     ///     - take a full snapshot
     /// slot 2:
-    ///     - make Account1 have zero lamports (send back to Account2)
+    ///     - make Account1 have zero carats (send back to Account2)
     ///     - take an incremental snapshot
     ///     - ensure deserializing from this snapshot is equal to this bank
     /// slot 3:
@@ -2953,7 +2953,7 @@ mod tests {
 
         let (genesis_config, mint_keypair) = create_genesis_config(1_000_000);
 
-        let lamports_to_transfer = 123_456;
+        let carats_to_transfer = 123_456;
         let bank0 = Arc::new(Bank::new_with_paths_for_tests(
             &genesis_config,
             vec![accounts_dir.path().to_path_buf()],
@@ -2966,7 +2966,7 @@ mod tests {
             false,
         ));
         bank0
-            .transfer(lamports_to_transfer, &mint_keypair, &key2.pubkey())
+            .transfer(carats_to_transfer, &mint_keypair, &key2.pubkey())
             .unwrap();
         while !bank0.is_complete() {
             bank0.register_tick(&Hash::new_unique());
@@ -2975,7 +2975,7 @@ mod tests {
         let slot = 1;
         let bank1 = Arc::new(Bank::new_from_parent(&bank0, &collector, slot));
         bank1
-            .transfer(lamports_to_transfer, &key2, &key1.pubkey())
+            .transfer(carats_to_transfer, &key2, &key1.pubkey())
             .unwrap();
         while !bank1.is_complete() {
             bank1.register_tick(&Hash::new_unique());
@@ -2998,7 +2998,7 @@ mod tests {
         let tx = SanitizedTransaction::try_from(system_transaction::transfer(
             &key1,
             &key2.pubkey(),
-            lamports_to_transfer,
+            carats_to_transfer,
             bank2.last_blockhash(),
         ))
         .unwrap();
@@ -3008,7 +3008,7 @@ mod tests {
         let tx = system_transaction::transfer(
             &key1,
             &key2.pubkey(),
-            lamports_to_transfer - fee,
+            carats_to_transfer - fee,
             bank2.last_blockhash(),
         );
         bank2.process_transaction(&tx).unwrap();
@@ -3062,7 +3062,7 @@ mod tests {
         let bank3 = Arc::new(Bank::new_from_parent(&bank2, &collector, slot));
         // Update Account2 so that it no longer holds a reference to slot2
         bank3
-            .transfer(lamports_to_transfer, &mint_keypair, &key2.pubkey())
+            .transfer(carats_to_transfer, &mint_keypair, &key2.pubkey())
             .unwrap();
         while !bank3.is_complete() {
             bank3.register_tick(&Hash::new_unique());

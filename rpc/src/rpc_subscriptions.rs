@@ -926,7 +926,7 @@ pub(crate) mod tests {
         std::{collections::HashSet, sync::atomic::Ordering::Relaxed},
     };
 
-    fn make_account_result(lamports: u64, subscription: u64, data: &str) -> serde_json::Value {
+    fn make_account_result(carats: u64, subscription: u64, data: &str) -> serde_json::Value {
         json!({
            "jsonrpc": "2.0",
            "method": "accountNotification",
@@ -936,7 +936,7 @@ pub(crate) mod tests {
                    "value": {
                        "data": data,
                        "executable": false,
-                       "lamports": lamports,
+                       "carats": carats,
                        "owner": "11111111111111111111111111111111",
                        "rentEpoch": 0,
                     },
@@ -1134,7 +1134,7 @@ pub(crate) mod tests {
                        "account": {
                           "data": "1111111111111111",
                           "executable": false,
-                          "lamports": 1,
+                          "carats": 1,
                           "owner": "Stake11111111111111111111111111111111111111",
                           "rentEpoch": 0,
                        },
@@ -1288,7 +1288,7 @@ pub(crate) mod tests {
         );
 
         // a closure to reduce code duplications in building expected responses:
-        let build_expected_resp = |slot: Slot, lamports: u64, pubkey: &str, subscription: i32| {
+        let build_expected_resp = |slot: Slot, carats: u64, pubkey: &str, subscription: i32| {
             json!({
                "jsonrpc": "2.0",
                "method": "programNotification",
@@ -1299,7 +1299,7 @@ pub(crate) mod tests {
                            "account": {
                               "data": "1111111111111111",
                               "executable": false,
-                              "lamports": lamports,
+                              "carats": carats,
                               "owner": "Stake11111111111111111111111111111111111111",
                               "rentEpoch": 0,
                            },
@@ -1566,7 +1566,7 @@ pub(crate) mod tests {
         );
 
         // a closure to reduce code duplications in building expected responses:
-        let build_expected_resp = |slot: Slot, lamports: u64, pubkey: &str, subscription: i32| {
+        let build_expected_resp = |slot: Slot, carats: u64, pubkey: &str, subscription: i32| {
             json!({
                "jsonrpc": "2.0",
                "method": "programNotification",
@@ -1577,7 +1577,7 @@ pub(crate) mod tests {
                            "account": {
                               "data": "1111111111111111",
                               "executable": false,
-                              "lamports": lamports,
+                              "carats": carats,
                               "owner": "Stake11111111111111111111111111111111111111",
                               "rentEpoch": 0,
                            },
@@ -2056,7 +2056,7 @@ pub(crate) mod tests {
                    "value": {
                        "data": "1111111111111111",
                        "executable": false,
-                       "lamports": 1,
+                       "carats": 1,
                        "owner": "Stake11111111111111111111111111111111111111",
                        "rentEpoch": 0,
                     },
@@ -2104,7 +2104,7 @@ pub(crate) mod tests {
                    "value": {
                        "data": "1111111111111111",
                        "executable": false,
-                       "lamports": 1,
+                       "carats": 1,
                        "owner": "Stake11111111111111111111111111111111111111",
                        "rentEpoch": 0,
                     },

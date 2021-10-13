@@ -16,7 +16,7 @@ $ solana-keygen pubkey
 <PUBKEY>
 ```
 
-### Airdrop SOL/Lamports
+### Airdrop SOL/Carats
 
 ```bash
 // Command

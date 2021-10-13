@@ -303,7 +303,7 @@ impl SanitizedMessage {
             }
         }
 
-        fee_calculator.lamports_per_signature.saturating_mul(
+        fee_calculator.carats_per_signature.saturating_mul(
             u64::from(self.header().num_required_signatures)
                 .saturating_add(num_secp256k1_signatures),
         )

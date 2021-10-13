@@ -23,7 +23,7 @@ use {
         clock::{Epoch, Slot, UnixTimestamp},
         epoch_info::EpochInfo,
         hash::Hash,
-        native_token::lamports_to_gema,
+        native_token::carats_to_gema,
         pubkey::Pubkey,
         signature::Signature,
         stake::state::{Authorized, Lockup},
@@ -100,7 +100,7 @@ pub struct CliAccount {
     #[serde(flatten)]
     pub keyed_account: RpcKeyedAccount,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 
 impl QuietDisplay for CliAccount {}
@@ -114,8 +114,8 @@ impl fmt::Display for CliAccount {
             f,
             "Balance:",
             &build_balance_message(
-                self.keyed_account.account.lamports,
-                self.use_lamports_unit,
+                self.keyed_account.account.carats,
+                self.use_carats_unit,
                 true,
             ),
         )?;
@@ -373,7 +373,7 @@ pub struct CliValidators {
     pub number_validators: bool,
     pub stake_by_version: BTreeMap<String, CliValidatorsStakeByVersion>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 
 impl QuietDisplay for CliValidators {}
@@ -385,7 +385,7 @@ impl fmt::Display for CliValidators {
             f: &mut fmt::Formatter,
             validator: &CliValidator,
             total_active_stake: u64,
-            use_lamports_unit: bool,
+            use_carats_unit: bool,
             highest_last_vote: u64,
             highest_root: u64,
         ) -> fmt::Result {
@@ -424,7 +424,7 @@ impl fmt::Display for CliValidators {
                 if validator.activated_stake > 0 {
                     format!(
                         "{} ({:.2}%)",
-                        build_balance_message(validator.activated_stake, use_lamports_unit, true),
+                        build_balance_message(validator.activated_stake, use_carats_unit, true),
                         100. * validator.activated_stake as f64 / total_active_stake as f64,
                     )
                 } else {
@@ -517,7 +517,7 @@ impl fmt::Display for CliValidators {
                 f,
                 validator,
                 self.total_active_stake,
-                self.use_lamports_unit,
+                self.use_carats_unit,
                 highest_last_vote,
                 highest_root,
             )?;
@@ -544,7 +544,7 @@ impl fmt::Display for CliValidators {
         writeln_name_value(
             f,
             "Active Stake:",
-            &build_balance_message(self.total_active_stake, self.use_lamports_unit, true),
+            &build_balance_message(self.total_active_stake, self.use_carats_unit, true),
         )?;
         if self.total_delinquent_stake > 0 {
             writeln_name_value(
@@ -552,7 +552,7 @@ impl fmt::Display for CliValidators {
                 "Current Stake:",
                 &format!(
                     "{} ({:0.2}%)",
-                    &build_balance_message(self.total_current_stake, self.use_lamports_unit, true),
+                    &build_balance_message(self.total_current_stake, self.use_carats_unit, true),
                     100. * self.total_current_stake as f64 / self.total_active_stake as f64
                 ),
             )?;
@@ -563,7 +563,7 @@ impl fmt::Display for CliValidators {
                     "{} ({:0.2}%)",
                     &build_balance_message(
                         self.total_delinquent_stake,
-                        self.use_lamports_unit,
+                        self.use_carats_unit,
                         true
                     ),
                     100. * self.total_delinquent_stake as f64 / self.total_active_stake as f64
@@ -688,10 +688,10 @@ pub struct CliNonceAccount {
     pub balance: u64,
     pub minimum_balance_for_rent_exemption: u64,
     pub nonce: Option<String>,
-    pub lamports_per_signature: Option<u64>,
+    pub carats_per_signature: Option<u64>,
     pub authority: Option<String>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 
 impl QuietDisplay for CliNonceAccount {}
@@ -702,21 +702,21 @@ impl fmt::Display for CliNonceAccount {
         writeln!(
             f,
             "Balance: {}",
-            build_balance_message(self.balance, self.use_lamports_unit, true)
+            build_balance_message(self.balance, self.use_carats_unit, true)
         )?;
         writeln!(
             f,
             "Minimum Balance Required: {}",
             build_balance_message(
                 self.minimum_balance_for_rent_exemption,
-                self.use_lamports_unit,
+                self.use_carats_unit,
                 true
             )
         )?;
         let nonce = self.nonce.as_deref().unwrap_or("uninitialized");
         writeln!(f, "Nonce blockhash: {}", nonce)?;
-        if let Some(fees) = self.lamports_per_signature {
-            writeln!(f, "Fee: {} lamports per signature", fees)?;
+        if let Some(fees) = self.carats_per_signature {
+            writeln!(f, "Fee: {} carats per signature", fees)?;
         } else {
             writeln!(f, "Fees: uninitialized")?;
         }
@@ -783,8 +783,8 @@ impl fmt::Display for CliKeyedStakeState {
 pub struct CliEpochReward {
     pub epoch: Epoch,
     pub effective_slot: Slot,
-    pub amount: u64,       // lamports
-    pub post_balance: u64, // lamports
+    pub amount: u64,       // carats
+    pub post_balance: u64, // carats
     pub percent_change: f64,
     pub apr: Option<f64>,
     pub commission: Option<u8>,
@@ -842,8 +842,8 @@ impl fmt::Display for CliKeyedEpochRewards {
                         f,
                         "  {:<44}  ◎{:<17.9}  ◎{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
                         keyed_reward.address,
-                        lamports_to_gema(reward.amount),
-                        lamports_to_gema(reward.post_balance),
+                        carats_to_gema(reward.amount),
+                        carats_to_gema(reward.post_balance),
                         reward.percent_change,
                         reward
                             .apr
@@ -978,8 +978,8 @@ fn show_epoch_rewards(
                 "  {:<6}  {:<11}  ◎{:<17.9}  ◎{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
                 reward.epoch,
                 reward.effective_slot,
-                lamports_to_gema(reward.amount),
-                lamports_to_gema(reward.post_balance),
+                carats_to_gema(reward.amount),
+                carats_to_gema(reward.post_balance),
                 reward.percent_change,
                 reward
                     .apr
@@ -1015,7 +1015,7 @@ pub struct CliStakeState {
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub lockup: Option<CliLockup>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
     #[serde(skip_serializing)]
     pub current_epoch: Epoch,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1068,14 +1068,14 @@ impl fmt::Display for CliStakeState {
         writeln!(
             f,
             "Balance: {}",
-            build_balance_message(self.account_balance, self.use_lamports_unit, true)
+            build_balance_message(self.account_balance, self.use_carats_unit, true)
         )?;
 
         if let Some(rent_exempt_reserve) = self.rent_exempt_reserve {
             writeln!(
                 f,
                 "Rent Exempt Reserve: {}",
-                build_balance_message(rent_exempt_reserve, self.use_lamports_unit, true)
+                build_balance_message(rent_exempt_reserve, self.use_carats_unit, true)
             )?;
         }
 
@@ -1102,7 +1102,7 @@ impl fmt::Display for CliStakeState {
                     writeln!(
                         f,
                         "Delegated Stake: {}",
-                        build_balance_message(delegated_stake, self.use_lamports_unit, true)
+                        build_balance_message(delegated_stake, self.use_carats_unit, true)
                     )?;
                     if self
                         .deactivation_epoch
@@ -1113,7 +1113,7 @@ impl fmt::Display for CliStakeState {
                         writeln!(
                             f,
                             "Active Stake: {}",
-                            build_balance_message(active_stake, self.use_lamports_unit, true),
+                            build_balance_message(active_stake, self.use_carats_unit, true),
                         )?;
                         let activating_stake = self.activating_stake.or_else(|| {
                             if self.active_stake.is_none() {
@@ -1128,7 +1128,7 @@ impl fmt::Display for CliStakeState {
                                 "Activating Stake: {}",
                                 build_balance_message(
                                     activating_stake,
-                                    self.use_lamports_unit,
+                                    self.use_carats_unit,
                                     true
                                 ),
                             )?;
@@ -1149,7 +1149,7 @@ impl fmt::Display for CliStakeState {
                                     "Inactive Stake: {}",
                                     build_balance_message(
                                         delegated_stake - deactivating_stake,
-                                        self.use_lamports_unit,
+                                        self.use_carats_unit,
                                         true
                                     ),
                                 )?;
@@ -1158,7 +1158,7 @@ impl fmt::Display for CliStakeState {
                                     "Deactivating Stake: {}",
                                     build_balance_message(
                                         deactivating_stake,
-                                        self.use_lamports_unit,
+                                        self.use_carats_unit,
                                         true
                                     ),
                                 )?;
@@ -1210,7 +1210,7 @@ impl Default for CliStakeType {
 pub struct CliStakeHistory {
     pub entries: Vec<CliStakeHistoryEntry>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 
 impl QuietDisplay for CliStakeHistory {}
@@ -1229,7 +1229,7 @@ impl fmt::Display for CliStakeHistory {
             .bold()
         )?;
         let config = BuildBalanceMessageConfig {
-            use_lamports_unit: self.use_lamports_unit,
+            use_carats_unit: self.use_carats_unit,
             show_unit: false,
             trim_trailing_zeros: false,
         };
@@ -1241,8 +1241,8 @@ impl fmt::Display for CliStakeHistory {
                 build_balance_message_with_config(entry.effective_stake, &config),
                 build_balance_message_with_config(entry.activating_stake, &config),
                 build_balance_message_with_config(entry.deactivating_stake, &config),
-                if self.use_lamports_unit {
-                    "lamports"
+                if self.use_carats_unit {
+                    "carats"
                 } else {
                     "GEMA"
                 }
@@ -1372,7 +1372,7 @@ pub struct CliVoteAccount {
     pub votes: Vec<CliLockout>,
     pub epoch_voting_history: Vec<CliEpochVotingHistory>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub epoch_rewards: Option<Vec<CliEpochReward>>,
 }
@@ -1385,7 +1385,7 @@ impl fmt::Display for CliVoteAccount {
         writeln!(
             f,
             "Account Balance: {}",
-            build_balance_message(self.account_balance, self.use_lamports_unit, true)
+            build_balance_message(self.account_balance, self.use_carats_unit, true)
         )?;
         writeln!(f, "Validator Identity: {}", self.validator_identity)?;
         writeln!(f, "Vote Authority: {}", self.authorized_voters)?;
@@ -1672,7 +1672,7 @@ impl fmt::Display for CliAccountBalances {
                 f,
                 "{:<44}  {}",
                 account.address,
-                &format!("{} GEMA", lamports_to_gema(account.lamports))
+                &format!("{} GEMA", carats_to_gema(account.carats))
             )?;
         }
         Ok(())
@@ -1707,16 +1707,16 @@ impl VerboseDisplay for CliSupply {}
 
 impl fmt::Display for CliSupply {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln_name_value(f, "Total:", &format!("{} GEMA", lamports_to_gema(self.total)))?;
+        writeln_name_value(f, "Total:", &format!("{} GEMA", carats_to_gema(self.total)))?;
         writeln_name_value(
             f,
             "Circulating:",
-            &format!("{} GEMA", lamports_to_gema(self.circulating)),
+            &format!("{} GEMA", carats_to_gema(self.circulating)),
         )?;
         writeln_name_value(
             f,
             "Non-Circulating:",
-            &format!("{} GEMA", lamports_to_gema(self.non_circulating)),
+            &format!("{} GEMA", carats_to_gema(self.non_circulating)),
         )?;
         if self.print_accounts {
             writeln!(f)?;
@@ -1734,7 +1734,7 @@ impl fmt::Display for CliSupply {
 pub struct CliFeesInner {
     pub slot: Slot,
     pub blockhash: String,
-    pub lamports_per_signature: u64,
+    pub carats_per_signature: u64,
     pub last_valid_slot: Option<Slot>,
     pub last_valid_block_height: Option<Slot>,
 }
@@ -1747,8 +1747,8 @@ impl fmt::Display for CliFeesInner {
         writeln_name_value(f, "Blockhash:", &self.blockhash)?;
         writeln_name_value(
             f,
-            "Lamports per signature:",
-            &self.lamports_per_signature.to_string(),
+            "Carats per signature:",
+            &self.carats_per_signature.to_string(),
         )?;
         let last_valid_block_height = self
             .last_valid_block_height
@@ -1781,7 +1781,7 @@ impl CliFees {
     pub fn some(
         slot: Slot,
         blockhash: Hash,
-        lamports_per_signature: u64,
+        carats_per_signature: u64,
         last_valid_slot: Option<Slot>,
         last_valid_block_height: Option<Slot>,
     ) -> Self {
@@ -1789,7 +1789,7 @@ impl CliFees {
             inner: Some(CliFeesInner {
                 slot,
                 blockhash: blockhash.to_string(),
-                lamports_per_signature,
+                carats_per_signature,
                 last_valid_slot,
                 last_valid_block_height,
             }),
@@ -1930,9 +1930,9 @@ pub struct CliUpgradeableProgram {
     pub authority: String,
     pub last_deploy_slot: u64,
     pub data_len: usize,
-    pub lamports: u64,
+    pub carats: u64,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 impl QuietDisplay for CliUpgradeableProgram {}
 impl VerboseDisplay for CliUpgradeableProgram {}
@@ -1956,7 +1956,7 @@ impl fmt::Display for CliUpgradeableProgram {
         writeln_name_value(
             f,
             "Balance:",
-            &build_balance_message(self.lamports, self.use_lamports_unit, true),
+            &build_balance_message(self.carats, self.use_carats_unit, true),
         )?;
         Ok(())
     }
@@ -1967,7 +1967,7 @@ impl fmt::Display for CliUpgradeableProgram {
 pub struct CliUpgradeablePrograms {
     pub programs: Vec<CliUpgradeableProgram>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 impl QuietDisplay for CliUpgradeablePrograms {}
 impl VerboseDisplay for CliUpgradeablePrograms {}
@@ -1992,7 +1992,7 @@ impl fmt::Display for CliUpgradeablePrograms {
                     program.program_id,
                     program.last_deploy_slot,
                     program.authority,
-                    build_balance_message(program.lamports, self.use_lamports_unit, true)
+                    build_balance_message(program.carats, self.use_carats_unit, true)
                 )
             )?;
         }
@@ -2004,9 +2004,9 @@ impl fmt::Display for CliUpgradeablePrograms {
 #[serde(rename_all = "camelCase")]
 pub struct CliUpgradeableProgramClosed {
     pub program_id: String,
-    pub lamports: u64,
+    pub carats: u64,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 impl QuietDisplay for CliUpgradeableProgramClosed {}
 impl VerboseDisplay for CliUpgradeableProgramClosed {}
@@ -2017,7 +2017,7 @@ impl fmt::Display for CliUpgradeableProgramClosed {
             f,
             "Closed Program Id {}, {} reclaimed",
             &self.program_id,
-            &build_balance_message(self.lamports, self.use_lamports_unit, true)
+            &build_balance_message(self.carats, self.use_carats_unit, true)
         )?;
         Ok(())
     }
@@ -2029,9 +2029,9 @@ pub struct CliUpgradeableBuffer {
     pub address: String,
     pub authority: String,
     pub data_len: usize,
-    pub lamports: u64,
+    pub carats: u64,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 impl QuietDisplay for CliUpgradeableBuffer {}
 impl VerboseDisplay for CliUpgradeableBuffer {}
@@ -2043,7 +2043,7 @@ impl fmt::Display for CliUpgradeableBuffer {
         writeln_name_value(
             f,
             "Balance:",
-            &build_balance_message(self.lamports, self.use_lamports_unit, true),
+            &build_balance_message(self.carats, self.use_carats_unit, true),
         )?;
         writeln_name_value(
             f,
@@ -2060,7 +2060,7 @@ impl fmt::Display for CliUpgradeableBuffer {
 pub struct CliUpgradeableBuffers {
     pub buffers: Vec<CliUpgradeableBuffer>,
     #[serde(skip_serializing)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 impl QuietDisplay for CliUpgradeableBuffers {}
 impl VerboseDisplay for CliUpgradeableBuffers {}
@@ -2084,7 +2084,7 @@ impl fmt::Display for CliUpgradeableBuffers {
                     "{:<44} | {:<44} | {}",
                     buffer.address,
                     buffer.authority,
-                    build_balance_message(buffer.lamports, self.use_lamports_unit, true)
+                    build_balance_message(buffer.carats, self.use_carats_unit, true)
                 )
             )?;
         }
@@ -2282,9 +2282,9 @@ impl fmt::Display for CliBlock {
                 "Address", "Type", "Amount", "New Balance", "Percent Change", "Commission"
             )?;
             for reward in rewards {
-                let sign = if reward.lamports < 0 { "-" } else { "" };
+                let sign = if reward.carats < 0 { "-" } else { "" };
 
-                total_rewards += reward.lamports;
+                total_rewards += reward.carats;
                 writeln!(
                     f,
                     "  {:<44}  {:^15}  {:>15}  {}  {}",
@@ -2297,16 +2297,16 @@ impl fmt::Display for CliBlock {
                     format!(
                         "{}◎{:<14.9}",
                         sign,
-                        lamports_to_gema(reward.lamports.abs() as u64)
+                        carats_to_gema(reward.carats.abs() as u64)
                     ),
                     if reward.post_balance == 0 {
                         "          -                 -".to_string()
                     } else {
                         format!(
                             "◎{:<19.9}  {:>13.9}%",
-                            lamports_to_gema(reward.post_balance),
-                            (reward.lamports.abs() as f64
-                                / (reward.post_balance as f64 - reward.lamports as f64))
+                            carats_to_gema(reward.post_balance),
+                            (reward.carats.abs() as f64
+                                / (reward.post_balance as f64 - reward.carats as f64))
                                 * 100.0
                         )
                     },
@@ -2322,7 +2322,7 @@ impl fmt::Display for CliBlock {
                 f,
                 "Total Rewards: {}◎{:<12.9}",
                 sign,
-                lamports_to_gema(total_rewards.abs() as u64)
+                carats_to_gema(total_rewards.abs() as u64)
             )?;
         }
         for (index, transaction_with_meta) in

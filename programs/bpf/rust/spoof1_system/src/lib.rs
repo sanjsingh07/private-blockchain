@@ -12,9 +12,9 @@ fn process_instruction(
     let from = &accounts[0];
     let to = &accounts[1];
 
-    let to_balance = to.lamports();
-    **to.lamports.borrow_mut() = to_balance + from.lamports();
-    **from.lamports.borrow_mut() = 0u64;
+    let to_balance = to.carats();
+    **to.carats.borrow_mut() = to_balance + from.carats();
+    **from.carats.borrow_mut() = 0u64;
 
     Ok(())
 }

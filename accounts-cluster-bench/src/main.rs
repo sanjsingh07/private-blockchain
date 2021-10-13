@@ -34,7 +34,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub fn airdrop_lamports(
+pub fn airdrop_carats(
     client: &RpcClient,
     faucet_addr: &SocketAddr,
     id: &Keypair,
@@ -46,7 +46,7 @@ pub fn airdrop_lamports(
     if starting_balance < desired_balance {
         let airdrop_amount = desired_balance - starting_balance;
         info!(
-            "Airdropping {:?} lamports from {} for {}",
+            "Airdropping {:?} carats from {} for {}",
             airdrop_amount,
             faucet_addr,
             id.pubkey(),
@@ -362,7 +362,7 @@ fn run_accounts_bench(
     maybe_space: Option<u64>,
     batch_size: usize,
     close_nth_batch: u64,
-    maybe_lamports: Option<u64>,
+    maybe_carats: Option<u64>,
     num_instructions: usize,
     mint: Option<Pubkey>,
 ) {
@@ -385,9 +385,9 @@ fn run_accounts_bench(
         .collect();
     let mut last_balance = Instant::now();
 
-    let default_max_lamports = 1000;
-    let min_balance = maybe_lamports.unwrap_or_else(|| {
-        let space = maybe_space.unwrap_or(default_max_lamports);
+    let default_max_carats = 1000;
+    let min_balance = maybe_carats.unwrap_or_else(|| {
+        let space = maybe_space.unwrap_or(default_max_carats);
         client
             .get_minimum_balance_for_rent_exemption(space as usize)
             .expect("min balance")
@@ -429,24 +429,24 @@ fn run_accounts_bench(
         let fee = client
             .get_fee_for_message(&blockhash, &message)
             .expect("get_fee_for_message");
-        let lamports = min_balance + fee;
+        let carats = min_balance + fee;
 
         for (i, balance) in balances.iter_mut().enumerate() {
-            if *balance < lamports || last_balance.elapsed().as_millis() > 2000 {
+            if *balance < carats || last_balance.elapsed().as_millis() > 2000 {
                 if let Ok(b) = client.get_balance(&payer_keypairs[i].pubkey()) {
                     *balance = b;
                 }
                 last_balance = Instant::now();
-                if *balance < lamports * 2 {
+                if *balance < carats * 2 {
                     info!(
                         "Balance {} is less than needed: {}, doing aidrop...",
-                        balance, lamports
+                        balance, carats
                     );
-                    if !airdrop_lamports(
+                    if !airdrop_carats(
                         &client,
                         &faucet_addr,
                         payer_keypairs[i],
-                        lamports * 100_000,
+                        carats * 100_000,
                     ) {
                         warn!("failed airdrop, exiting");
                         return;
@@ -480,7 +480,7 @@ fn run_accounts_bench(
                                 Transaction::new(&signers, message, blockhash)
                             })
                             .collect();
-                        balances[i] = balances[i].saturating_sub(lamports * txs.len() as u64);
+                        balances[i] = balances[i].saturating_sub(carats * txs.len() as u64);
                         info!("txs: {}", txs.len());
                         let new_ids = executor.push_transactions(txs);
                         info!("ids: {}", new_ids.len());
@@ -569,11 +569,11 @@ fn main() {
                 .help("Size of accounts to create"),
         )
         .arg(
-            Arg::with_name("lamports")
-                .long("lamports")
+            Arg::with_name("carats")
+                .long("carats")
                 .takes_value(true)
                 .value_name("LAMPORTS")
-                .help("How many lamports to fund each account"),
+                .help("How many carats to fund each account"),
         )
         .arg(
             Arg::with_name("identity")
@@ -649,7 +649,7 @@ fn main() {
     }
 
     let space = value_t!(matches, "space", u64).ok();
-    let lamports = value_t!(matches, "lamports", u64).ok();
+    let carats = value_t!(matches, "carats", u64).ok();
     let batch_size = value_t!(matches, "batch_size", usize).unwrap_or(4);
     let close_nth_batch = value_t!(matches, "close_nth_batch", u64).unwrap_or(0);
     let iterations = value_t!(matches, "iterations", usize).unwrap_or(10);
@@ -706,7 +706,7 @@ fn main() {
         space,
         batch_size,
         close_nth_batch,
-        lamports,
+        carats,
         num_instructions,
         mint,
     );
@@ -728,7 +728,7 @@ pub mod test {
         let validator_config = ValidatorConfig::default();
         let num_nodes = 1;
         let mut config = ClusterConfig {
-            cluster_lamports: 10_000_000,
+            cluster_carats: 10_000_000,
             poh_config: PohConfig::new_sleep(Duration::from_millis(50)),
             node_stakes: vec![100; num_nodes],
             validator_configs: make_identical_validator_configs(&validator_config, num_nodes),
@@ -741,7 +741,7 @@ pub mod test {
         let maybe_space = None;
         let batch_size = 100;
         let close_nth_batch = 100;
-        let maybe_lamports = None;
+        let maybe_carats = None;
         let num_instructions = 2;
         let mut start = Measure::start("total accounts run");
         run_accounts_bench(
@@ -752,7 +752,7 @@ pub mod test {
             maybe_space,
             batch_size,
             close_nth_batch,
-            maybe_lamports,
+            maybe_carats,
             num_instructions,
             None,
         );

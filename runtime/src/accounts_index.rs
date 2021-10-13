@@ -1488,7 +1488,7 @@ impl<T: IndexValue> AccountsIndex<T> {
             self.program_id_index.insert(account_owner, pubkey);
         }
         // Note because of the below check below on the account data length, when an
-        // account hits zero lamports and is reset to AccountSharedData::Default, then we skip
+        // account hits zero carats and is reset to AccountSharedData::Default, then we skip
         // the below updates to the secondary indexes.
         //
         // Skipping means not updating secondary index to mark the account as missing.
@@ -1611,7 +1611,7 @@ impl<T: IndexValue> AccountsIndex<T> {
                     );
 
                     if !is_zero_lamport {
-                        // zero lamports were already added to dirty_pubkeys above
+                        // zero carats were already added to dirty_pubkeys above
                         dirty_pubkeys.push(pubkey);
                     }
                 }
@@ -2796,7 +2796,7 @@ pub mod tests {
         );
         assert_eq!(num, 1);
 
-        // not zero lamports
+        // not zero carats
         let index = AccountsIndex::<AccountInfoTest>::default_for_tests();
         let account_info: AccountInfoTest = 0 as AccountInfoTest;
         let items = vec![(*pubkey, account_info)];

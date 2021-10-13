@@ -15,7 +15,7 @@ extern "C" {
  */
 typedef struct {
   SolPubkey *key;      /** Public key of the account */
-  uint64_t *lamports;  /** Number of lamports owned by this account */
+  uint64_t *carats;  /** Number of carats owned by this account */
   uint64_t data_len;   /** Length of data in bytes */
   uint8_t *data;       /** On-chain data within this account */
   SolPubkey *owner;    /** Program that owns this account */

@@ -17,7 +17,7 @@ use solana_sdk::{
     account::{AccountSharedData, ReadableAccount},
     genesis_config::{create_genesis_config, ClusterType},
     hash::Hash,
-    lamports::LamportsError,
+    carats::LamportsError,
     pubkey::Pubkey,
 };
 use std::{
@@ -107,13 +107,13 @@ fn test_accounts_hash_bank_hash(bencher: &mut Bencher) {
     let slot = 0;
     create_test_accounts(&accounts, &mut pubkeys, num_accounts, slot);
     let ancestors = Ancestors::from(vec![0]);
-    let (_, total_lamports) = accounts.accounts_db.update_accounts_hash(0, &ancestors);
+    let (_, total_carats) = accounts.accounts_db.update_accounts_hash(0, &ancestors);
     let test_hash_calculation = false;
     bencher.iter(|| {
-        assert!(accounts.verify_bank_hash_and_lamports(
+        assert!(accounts.verify_bank_hash_and_carats(
             0,
             &ancestors,
-            total_lamports,
+            total_carats,
             test_hash_calculation
         ))
     });
@@ -391,9 +391,9 @@ fn bench_load_largest_accounts(b: &mut Bencher) {
     );
     let mut rng = rand::thread_rng();
     for _ in 0..10_000 {
-        let lamports = rng.gen();
+        let carats = rng.gen();
         let pubkey = Pubkey::new_unique();
-        let account = AccountSharedData::new(lamports, 0, &Pubkey::default());
+        let account = AccountSharedData::new(carats, 0, &Pubkey::default());
         accounts.store_slow_uncached(0, &pubkey, &account);
     }
     let ancestors = Ancestors::from(vec![0]);

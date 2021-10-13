@@ -64,7 +64,7 @@ pub fn get_serialized_account_size_unaligned(
         size_of::<u8>() // is_signer
             + size_of::<u8>() // is_writable
             + size_of::<Pubkey>() // key
-            + size_of::<u64>()  // lamports
+            + size_of::<u64>()  // carats
             + size_of::<u64>()  // data len
             + data_len // data
             + size_of::<Pubkey>() // owner
@@ -108,7 +108,7 @@ pub fn serialize_parameters_unaligned(
                 .map_err(|_| InstructionError::InvalidArgument)?;
             v.write_all(keyed_account.unsigned_key().as_ref())
                 .map_err(|_| InstructionError::InvalidArgument)?;
-            v.write_u64::<LittleEndian>(keyed_account.lamports()?)
+            v.write_u64::<LittleEndian>(keyed_account.carats()?)
                 .map_err(|_| InstructionError::InvalidArgument)?;
             v.write_u64::<LittleEndian>(keyed_account.data_len()? as u64)
                 .map_err(|_| InstructionError::InvalidArgument)?;
@@ -150,8 +150,8 @@ pub fn deserialize_parameters_unaligned(
             start += size_of::<Pubkey>(); // key
             keyed_account
                 .try_account_ref_mut()?
-                .set_lamports(LittleEndian::read_u64(&buffer[start..]));
-            start += size_of::<u64>() // lamports
+                .set_carats(LittleEndian::read_u64(&buffer[start..]));
+            start += size_of::<u64>() // carats
                 + size_of::<u64>(); // data length
             let end = start + keyed_account.data_len()?;
             keyed_account
@@ -177,7 +177,7 @@ pub fn get_serialized_account_size_aligned(
             + 4 // padding to 128-bit aligned
             + size_of::<Pubkey>()  // key
             + size_of::<Pubkey>() // owner
-            + size_of::<u64>()  // lamports
+            + size_of::<u64>()  // carats
             + size_of::<u64>()  // data len
             + data_len
             + MAX_PERMITTED_DATA_INCREASE
@@ -232,7 +232,7 @@ pub fn serialize_parameters_aligned(
                 .map_err(|_| InstructionError::InvalidArgument)?;
             v.write_all(keyed_account.owner()?.as_ref())
                 .map_err(|_| InstructionError::InvalidArgument)?;
-            v.write_u64::<LittleEndian>(keyed_account.lamports()?)
+            v.write_u64::<LittleEndian>(keyed_account.carats()?)
                 .map_err(|_| InstructionError::InvalidArgument)?;
             v.write_u64::<LittleEndian>(keyed_account.data_len()? as u64)
                 .map_err(|_| InstructionError::InvalidArgument)?;
@@ -281,8 +281,8 @@ pub fn deserialize_parameters_aligned(
                 + size_of::<Pubkey>(); // key
             account.copy_into_owner_from_slice(&buffer[start..start + size_of::<Pubkey>()]);
             start += size_of::<Pubkey>(); // owner
-            account.set_lamports(LittleEndian::read_u64(&buffer[start..]));
-            start += size_of::<u64>(); // lamports
+            account.set_carats(LittleEndian::read_u64(&buffer[start..]));
+            start += size_of::<u64>(); // carats
             let post_len = LittleEndian::read_u64(&buffer[start..]) as usize;
             start += size_of::<u64>(); // data length
             let mut data_end = start + *pre_len;
@@ -334,7 +334,7 @@ mod tests {
         ];
         let accounts = [
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 1,
+                carats: 1,
                 data: vec![1u8, 2, 3, 4, 5],
                 owner: bpf_loader::id(),
                 executable: false,
@@ -342,28 +342,28 @@ mod tests {
             })),
             // dup
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 1,
+                carats: 1,
                 data: vec![1u8, 2, 3, 4, 5],
                 owner: bpf_loader::id(),
                 executable: false,
                 rent_epoch: 100,
             })),
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 2,
+                carats: 2,
                 data: vec![11u8, 12, 13, 14, 15, 16, 17, 18, 19],
                 owner: bpf_loader::id(),
                 executable: true,
                 rent_epoch: 200,
             })),
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 3,
+                carats: 3,
                 data: vec![],
                 owner: bpf_loader::id(),
                 executable: false,
                 rent_epoch: 3100,
             })),
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 4,
+                carats: 4,
                 data: vec![1u8, 2, 3, 4, 5],
                 owner: bpf_loader::id(),
                 executable: false,
@@ -371,21 +371,21 @@ mod tests {
             })),
             // dup
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 4,
+                carats: 4,
                 data: vec![1u8, 2, 3, 4, 5],
                 owner: bpf_loader::id(),
                 executable: false,
                 rent_epoch: 100,
             })),
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 5,
+                carats: 5,
                 data: vec![11u8, 12, 13, 14, 15, 16, 17, 18, 19],
                 owner: bpf_loader::id(),
                 executable: true,
                 rent_epoch: 200,
             })),
             RefCell::new(AccountSharedData::from(Account {
-                lamports: 6,
+                carats: 6,
                 data: vec![],
                 owner: bpf_loader::id(),
                 executable: false,
@@ -429,14 +429,14 @@ mod tests {
         for ((account, account_info), key) in accounts.iter().zip(de_accounts).zip(keys.clone()) {
             assert_eq!(key, *account_info.key);
             let account = account.borrow();
-            assert_eq!(account.lamports(), account_info.lamports());
+            assert_eq!(account.carats(), account_info.carats());
             assert_eq!(account.data(), &account_info.data.borrow()[..]);
             assert_eq!(account.owner(), account_info.owner);
             assert_eq!(account.executable(), account_info.executable);
             assert_eq!(account.rent_epoch(), account_info.rent_epoch);
 
             assert_eq!(
-                (*account_info.lamports.borrow() as *const u64).align_offset(align_of::<u64>()),
+                (*account_info.carats.borrow() as *const u64).align_offset(align_of::<u64>()),
                 0
             );
             assert_eq!(
@@ -495,7 +495,7 @@ mod tests {
         for ((account, account_info), key) in accounts.iter().zip(de_accounts).zip(keys.clone()) {
             assert_eq!(key, *account_info.key);
             let account = account.borrow();
-            assert_eq!(account.lamports(), account_info.lamports());
+            assert_eq!(account.carats(), account_info.carats());
             assert_eq!(account.data(), &account_info.data.borrow()[..]);
             assert_eq!(account.owner(), account_info.owner);
             assert_eq!(account.executable(), account_info.executable);
@@ -527,7 +527,7 @@ mod tests {
         {
             assert_eq!(key, *de_keyed_account.unsigned_key());
             let account = account.borrow();
-            assert_eq!(account.lamports(), de_keyed_account.lamports().unwrap());
+            assert_eq!(account.carats(), de_keyed_account.carats().unwrap());
             assert_eq!(
                 account.data(),
                 de_keyed_account.try_account_ref().unwrap().data()
@@ -570,7 +570,7 @@ mod tests {
                 offset += size_of::<Pubkey>();
 
                 #[allow(clippy::cast_ptr_alignment)]
-                let lamports = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
+                let carats = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
                 offset += size_of::<u64>();
 
                 #[allow(clippy::cast_ptr_alignment)]
@@ -597,7 +597,7 @@ mod tests {
                     key,
                     is_signer,
                     is_writable,
-                    lamports,
+                    carats,
                     data,
                     owner,
                     executable,

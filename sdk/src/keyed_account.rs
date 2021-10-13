@@ -35,8 +35,8 @@ impl<'a> KeyedAccount<'a> {
         self.is_writable
     }
 
-    pub fn lamports(&self) -> Result<u64, InstructionError> {
-        Ok(self.try_borrow()?.lamports())
+    pub fn carats(&self) -> Result<u64, InstructionError> {
+        Ok(self.try_borrow()?.carats())
     }
 
     pub fn data_len(&self) -> Result<usize, InstructionError> {

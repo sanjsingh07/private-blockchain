@@ -10,7 +10,7 @@ use crate::{
     fee_calculator::FeeRateGovernor,
     hash::{hash, Hash},
     inflation::Inflation,
-    native_token::lamports_to_gema,
+    native_token::carats_to_gema,
     poh_config::PohConfig,
     pubkey::Pubkey,
     rent::Rent,
@@ -97,13 +97,13 @@ pub struct GenesisConfig {
 }
 
 // useful for basic tests
-pub fn create_genesis_config(lamports: u64) -> (GenesisConfig, Keypair) {
+pub fn create_genesis_config(carats: u64) -> (GenesisConfig, Keypair) {
     let faucet_keypair = Keypair::new();
     (
         GenesisConfig::new(
             &[(
                 faucet_keypair.pubkey(),
-                AccountSharedData::new(lamports, 0, &system_program::id()),
+                AccountSharedData::new(carats, 0, &system_program::id()),
             )],
             &[],
         ),
@@ -273,14 +273,14 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_gema(
+            carats_to_gema(
                 self.accounts
                     .iter()
                     .map(|(pubkey, account)| {
-                        if account.lamports == 0 {
+                        if account.carats == 0 {
                             panic!("{:?}", (pubkey, account));
                         }
-                        account.lamports
+                        account.carats
                     })
                     .sum::<u64>()
             ),
@@ -336,7 +336,7 @@ mod tests {
             .accounts
             .iter()
             .any(|(pubkey, account)| *pubkey == faucet_keypair.pubkey()
-                && account.lamports == 10_000));
+                && account.carats == 10_000));
 
         let path = &make_tmp_path("genesis_config");
         config.write(path).expect("write");

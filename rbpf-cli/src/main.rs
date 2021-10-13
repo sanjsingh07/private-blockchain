@@ -23,7 +23,7 @@ use time::Instant;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Account {
-    lamports: u64,
+    carats: u64,
     data: Vec<u8>,
     owner: Pubkey,
 }
@@ -59,7 +59,7 @@ and the following fields are required
 {
     "accounts": [
         {
-            "lamports": 1000,
+            "carats": 1000,
             "data": [0, 0, 0, 3],
             "owner": [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -161,7 +161,7 @@ native machine code before execting it in the virtual machine.",
         Err(_) => {
             let input = load_accounts(Path::new(matches.value_of("input").unwrap())).unwrap();
             for acc in input.accounts {
-                let asd = AccountSharedData::new_ref(acc.lamports, acc.data.len(), &acc.owner);
+                let asd = AccountSharedData::new_ref(acc.carats, acc.data.len(), &acc.owner);
                 asd.borrow_mut().set_data(acc.data);
                 account_refcells.push(asd);
             }

@@ -39,7 +39,7 @@ async fn setup_stake(
     context: &mut ProgramTestContext,
     user: &Keypair,
     vote_address: &Pubkey,
-    stake_lamports: u64,
+    stake_carats: u64,
 ) -> Pubkey {
     let stake_keypair = Keypair::new();
     let transaction = Transaction::new_signed_with_payer(
@@ -49,7 +49,7 @@ async fn setup_stake(
             vote_address,
             &Authorized::auto(&user.pubkey()),
             &Lockup::default(),
-            stake_lamports,
+            stake_carats,
         ),
         Some(&context.payer.pubkey()),
         &vec![&context.payer, &stake_keypair, user],
@@ -75,7 +75,7 @@ async fn setup_vote(context: &mut ProgramTestContext) -> Pubkey {
         0,
         &system_program::id(),
     ));
-    let vote_lamports = Rent::default().minimum_balance(VoteState::size_of());
+    let vote_carats = Rent::default().minimum_balance(VoteState::size_of());
     let vote_keypair = Keypair::new();
     let user_keypair = Keypair::new();
     instructions.append(&mut vote_instruction::create_account(
@@ -86,7 +86,7 @@ async fn setup_vote(context: &mut ProgramTestContext) -> Pubkey {
             authorized_voter: user_keypair.pubkey(),
             ..VoteInit::default()
         },
-        vote_lamports,
+        vote_carats,
     ));
 
     let transaction = Transaction::new_signed_with_payer(
@@ -190,11 +190,11 @@ async fn rent_collected_from_warp() {
     let mut context = program_test.start_with_context().await;
     let account_size = 100;
     let keypair = Keypair::new();
-    let account_lamports = Rent::default().minimum_balance(account_size) - 100; // not rent exempt
+    let account_carats = Rent::default().minimum_balance(account_size) - 100; // not rent exempt
     let instruction = system_instruction::create_account(
         &context.payer.pubkey(),
         &keypair.pubkey(),
-        account_lamports,
+        account_carats,
         account_size as u64,
         &program_id,
     );
@@ -215,7 +215,7 @@ async fn rent_collected_from_warp() {
         .await
         .expect("account exists")
         .unwrap();
-    assert_eq!(account.lamports, account_lamports);
+    assert_eq!(account.carats, account_carats);
 
     // Warp forward and see that rent has been collected
     // This test was a bit flaky with one warp, but two warps always works
@@ -229,7 +229,7 @@ async fn rent_collected_from_warp() {
         .await
         .expect("account exists")
         .unwrap();
-    assert!(account.lamports < account_lamports);
+    assert!(account.carats < account_carats);
 }
 
 #[tokio::test]
@@ -240,9 +240,9 @@ async fn stake_rewards_from_warp() {
     let vote_address = setup_vote(&mut context).await;
 
     let user_keypair = Keypair::new();
-    let stake_lamports = 1_000_000_000_000;
+    let stake_carats = 1_000_000_000_000;
     let stake_address =
-        setup_stake(&mut context, &user_keypair, &vote_address, stake_lamports).await;
+        setup_stake(&mut context, &user_keypair, &vote_address, stake_carats).await;
 
     let account = context
         .banks_client
@@ -250,7 +250,7 @@ async fn stake_rewards_from_warp() {
         .await
         .expect("account exists")
         .unwrap();
-    assert_eq!(account.lamports, stake_lamports);
+    assert_eq!(account.carats, stake_carats);
 
     // warp one epoch forward for normal inflation, no rewards collected
     let first_normal_slot = context.genesis_config().epoch_schedule.first_normal_slot;
@@ -261,7 +261,7 @@ async fn stake_rewards_from_warp() {
         .await
         .expect("account exists")
         .unwrap();
-    assert_eq!(account.lamports, stake_lamports);
+    assert_eq!(account.carats, stake_carats);
 
     context.increment_vote_account_credits(&vote_address, 100);
 
@@ -277,7 +277,7 @@ async fn stake_rewards_from_warp() {
         .await
         .expect("account exists")
         .unwrap();
-    assert!(account.lamports > stake_lamports);
+    assert!(account.carats > stake_carats);
 
     // check that stake is fully active
     let stake_history_account = context
@@ -341,9 +341,9 @@ async fn stake_merge_immediately_after_activation() {
 
     // make a base stake which receives rewards
     let user_keypair = Keypair::new();
-    let stake_lamports = 1_000_000_000_000;
+    let stake_carats = 1_000_000_000_000;
     let base_stake_address =
-        setup_stake(&mut context, &user_keypair, &vote_address, stake_lamports).await;
+        setup_stake(&mut context, &user_keypair, &vote_address, stake_carats).await;
     check_credits_observed(&mut context.banks_client, base_stake_address, 100).await;
     context.increment_vote_account_credits(&vote_address, 100);
 
@@ -352,7 +352,7 @@ async fn stake_merge_immediately_after_activation() {
 
     // make another stake which will just have its credits observed advanced
     let absorbed_stake_address =
-        setup_stake(&mut context, &user_keypair, &vote_address, stake_lamports).await;
+        setup_stake(&mut context, &user_keypair, &vote_address, stake_carats).await;
     // the new stake is at the right value
     check_credits_observed(&mut context.banks_client, absorbed_stake_address, 200).await;
     // the base stake hasn't been moved forward because no rewards were earned
@@ -371,7 +371,7 @@ async fn stake_merge_immediately_after_activation() {
         .unwrap();
     let stake_state: StakeState = deserialize(&stake_account.data).unwrap();
     assert_eq!(stake_state.stake().unwrap().credits_observed, 300);
-    assert!(stake_account.lamports > stake_lamports);
+    assert!(stake_account.carats > stake_carats);
 
     // check that new stake hasn't earned rewards, but that credits_observed have been advanced
     let stake_account = context
@@ -382,7 +382,7 @@ async fn stake_merge_immediately_after_activation() {
         .unwrap();
     let stake_state: StakeState = deserialize(&stake_account.data).unwrap();
     assert_eq!(stake_state.stake().unwrap().credits_observed, 300);
-    assert_eq!(stake_account.lamports, stake_lamports);
+    assert_eq!(stake_account.carats, stake_carats);
 
     // sanity-check that the activation epoch was actually last epoch
     let clock_account = context

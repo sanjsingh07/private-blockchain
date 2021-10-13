@@ -45,8 +45,8 @@ uint64_t do_nested_invokes(uint64_t num_nested_invokes,
                            SolAccountInfo *accounts, uint64_t num_accounts) {
   sol_assert(accounts[ARGUMENT_INDEX].is_signer);
 
-  *accounts[ARGUMENT_INDEX].lamports -= 5;
-  *accounts[INVOKED_ARGUMENT_INDEX].lamports += 5;
+  *accounts[ARGUMENT_INDEX].carats -= 5;
+  *accounts[INVOKED_ARGUMENT_INDEX].carats += 5;
 
   SolAccountMeta arguments[] = {
       {accounts[INVOKED_ARGUMENT_INDEX].key, true, true},
@@ -62,9 +62,9 @@ uint64_t do_nested_invokes(uint64_t num_nested_invokes,
   sol_log("2nd invoke from first program");
   sol_assert(SUCCESS == sol_invoke(&instruction, accounts, num_accounts));
 
-  sol_assert(*accounts[ARGUMENT_INDEX].lamports ==
+  sol_assert(*accounts[ARGUMENT_INDEX].carats ==
              42 - 5 + (2 * num_nested_invokes));
-  sol_assert(*accounts[INVOKED_ARGUMENT_INDEX].lamports ==
+  sol_assert(*accounts[INVOKED_ARGUMENT_INDEX].carats ==
              10 + 5 - (2 * num_nested_invokes));
 
   return SUCCESS;
@@ -88,8 +88,8 @@ extern uint64_t entrypoint(const uint8_t *input) {
   case TEST_SUCCESS: {
     sol_log("Call system program create account");
     {
-      uint64_t from_lamports = *accounts[FROM_INDEX].lamports;
-      uint64_t to_lamports = *accounts[DERIVED_KEY1_INDEX].lamports;
+      uint64_t from_carats = *accounts[FROM_INDEX].carats;
+      uint64_t to_carats = *accounts[DERIVED_KEY1_INDEX].carats;
       SolAccountMeta arguments[] = {
           {accounts[FROM_INDEX].key, true, true},
           {accounts[DERIVED_KEY1_INDEX].key, true, true}};
@@ -109,8 +109,8 @@ extern uint64_t entrypoint(const uint8_t *input) {
                                               SOL_ARRAY_SIZE(accounts),
                                               signers_seeds,
                                               SOL_ARRAY_SIZE(signers_seeds)));
-      sol_assert(*accounts[FROM_INDEX].lamports == from_lamports - 42);
-      sol_assert(*accounts[DERIVED_KEY1_INDEX].lamports == to_lamports + 42);
+      sol_assert(*accounts[FROM_INDEX].carats == from_carats - 42);
+      sol_assert(*accounts[DERIVED_KEY1_INDEX].carats == to_carats + 42);
       sol_assert(SolPubkey_same(accounts[DERIVED_KEY1_INDEX].owner,
                                 params.program_id));
       sol_assert(accounts[DERIVED_KEY1_INDEX].data_len ==
@@ -129,8 +129,8 @@ extern uint64_t entrypoint(const uint8_t *input) {
 
     sol_log("Call system program transfer");
     {
-      uint64_t from_lamports = *accounts[FROM_INDEX].lamports;
-      uint64_t to_lamports = *accounts[DERIVED_KEY1_INDEX].lamports;
+      uint64_t from_carats = *accounts[FROM_INDEX].carats;
+      uint64_t to_carats = *accounts[DERIVED_KEY1_INDEX].carats;
       SolAccountMeta arguments[] = {
           {accounts[FROM_INDEX].key, true, true},
           {accounts[DERIVED_KEY1_INDEX].key, true, false}};
@@ -140,8 +140,8 @@ extern uint64_t entrypoint(const uint8_t *input) {
                                           data, SOL_ARRAY_SIZE(data)};
       sol_assert(SUCCESS ==
                  sol_invoke(&instruction, accounts, SOL_ARRAY_SIZE(accounts)));
-      sol_assert(*accounts[FROM_INDEX].lamports == from_lamports - 1);
-      sol_assert(*accounts[DERIVED_KEY1_INDEX].lamports == to_lamports + 1);
+      sol_assert(*accounts[FROM_INDEX].carats == from_carats - 1);
+      sol_assert(*accounts[DERIVED_KEY1_INDEX].carats == to_carats + 1);
     }
 
     sol_log("Test data translation");
@@ -456,7 +456,7 @@ extern uint64_t entrypoint(const uint8_t *input) {
 
     SolAccountInfo derived_account = {
         .key = accounts[DERIVED_KEY1_INDEX].key,
-        .lamports = accounts[DERIVED_KEY1_INDEX].lamports,
+        .carats = accounts[DERIVED_KEY1_INDEX].carats,
         .data_len = accounts[DERIVED_KEY1_INDEX].data_len,
         // Point to top edge of heap, attempt to allocate into unprivileged
         // memory
@@ -570,10 +570,10 @@ extern uint64_t entrypoint(const uint8_t *input) {
     break;
   }
   case TEST_EXECUTABLE_LAMPORTS: {
-    sol_log("Test executable lamports");
+    sol_log("Test executable carats");
     accounts[ARGUMENT_INDEX].executable = true;
-    *accounts[ARGUMENT_INDEX].lamports -= 1;
-    *accounts[DERIVED_KEY1_INDEX].lamports +=1;
+    *accounts[ARGUMENT_INDEX].carats -= 1;
+    *accounts[DERIVED_KEY1_INDEX].carats +=1;
     SolAccountMeta arguments[] = {
       {accounts[ARGUMENT_INDEX].key, true, false},
       {accounts[DERIVED_KEY1_INDEX].key, true, false},
@@ -585,11 +585,11 @@ extern uint64_t entrypoint(const uint8_t *input) {
 					arguments, SOL_ARRAY_SIZE(arguments),
 					data, SOL_ARRAY_SIZE(data)};
     sol_invoke(&instruction, accounts, SOL_ARRAY_SIZE(accounts));
-    *accounts[ARGUMENT_INDEX].lamports += 1;
+    *accounts[ARGUMENT_INDEX].carats += 1;
     break;
   }
   case ADD_LAMPORTS: {
-    *accounts[0].lamports += 1;
+    *accounts[0].carats += 1;
      break;
   }
   case TEST_RETURN_DATA_TOO_LARGE: {

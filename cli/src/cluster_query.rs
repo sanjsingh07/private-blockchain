@@ -40,7 +40,7 @@ use solana_sdk::{
     epoch_schedule::Epoch,
     hash::Hash,
     message::Message,
-    native_token::lamports_to_gema,
+    native_token::carats_to_gema,
     nonce::State as NonceState,
     pubkey::{self, Pubkey},
     rent::Rent,
@@ -261,13 +261,13 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                         .help("Print timestamp (unix time + microseconds as in gettimeofday) before each line"),
                 )
                 .arg(
-                    Arg::with_name("lamports")
-                        .long("lamports")
+                    Arg::with_name("carats")
+                        .long("carats")
                         .value_name("NUMBER")
                         .takes_value(true)
                         .default_value("1")
                         .validator(is_amount)
-                        .help("Number of lamports to transfer for each transaction"),
+                        .help("Number of carats to transfer for each transaction"),
                 )
                 .arg(
                     Arg::with_name("timeout")
@@ -336,10 +336,10 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                         "Only show stake accounts delegated to the provided vote accounts. "),
                 )
                 .arg(
-                    Arg::with_name("lamports")
-                        .long("lamports")
+                    Arg::with_name("carats")
+                        .long("carats")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of GEMA"),
+                        .help("Display balance in carats instead of GEMA"),
                 ),
         )
         .subcommand(
@@ -347,10 +347,10 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                 .about("Show summary information about the current validators")
                 .alias("show-validators")
                 .arg(
-                    Arg::with_name("lamports")
-                        .long("lamports")
+                    Arg::with_name("carats")
+                        .long("carats")
                         .takes_value(false)
-                        .help("Display balance in lamports instead of GEMA"),
+                        .help("Display balance in carats instead of GEMA"),
                 )
                 .arg(
                     Arg::with_name("number")
@@ -465,10 +465,10 @@ impl ClusterQuerySubCommands for App<'_, '_> {
                         .help("Length of data in the account to calculate rent for, or moniker: [nonce, stake, system, vote]"),
                 )
                 .arg(
-                    Arg::with_name("lamports")
-                        .long("lamports")
+                    Arg::with_name("carats")
+                        .long("carats")
                         .takes_value(false)
-                        .help("Display rent in lamports instead of GEMA"),
+                        .help("Display rent in carats instead of GEMA"),
                 ),
         )
     }
@@ -513,7 +513,7 @@ pub fn parse_cluster_ping(
     default_signer: &DefaultSigner,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
-    let lamports = value_t_or_exit!(matches, "lamports", u64);
+    let carats = value_t_or_exit!(matches, "carats", u64);
     let interval = Duration::from_secs(value_t_or_exit!(matches, "interval", u64));
     let count = if matches.is_present("count") {
         Some(value_t_or_exit!(matches, "count", u64))
@@ -525,7 +525,7 @@ pub fn parse_cluster_ping(
     let print_timestamp = matches.is_present("print_timestamp");
     Ok(CliCommandInfo {
         command: CliCommand::Ping {
-            lamports,
+            carats,
             interval,
             count,
             timeout,
@@ -620,13 +620,13 @@ pub fn parse_show_stakes(
     matches: &ArgMatches<'_>,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<CliCommandInfo, CliError> {
-    let use_lamports_unit = matches.is_present("lamports");
+    let use_carats_unit = matches.is_present("carats");
     let vote_account_pubkeys =
         pubkeys_of_multiple_signers(matches, "vote_account_pubkeys", wallet_manager)?;
 
     Ok(CliCommandInfo {
         command: CliCommand::ShowStakes {
-            use_lamports_unit,
+            use_carats_unit,
             vote_account_pubkeys,
         },
         signers: vec![],
@@ -634,7 +634,7 @@ pub fn parse_show_stakes(
 }
 
 pub fn parse_show_validators(matches: &ArgMatches<'_>) -> Result<CliCommandInfo, CliError> {
-    let use_lamports_unit = matches.is_present("lamports");
+    let use_carats_unit = matches.is_present("carats");
     let number_validators = matches.is_present("number");
     let reverse_sort = matches.is_present("reverse");
     let keep_unstaked_delinquents = matches.is_present("keep_unstaked_delinquents");
@@ -655,7 +655,7 @@ pub fn parse_show_validators(matches: &ArgMatches<'_>) -> Result<CliCommandInfo,
 
     Ok(CliCommandInfo {
         command: CliCommand::ShowValidators {
-            use_lamports_unit,
+            use_carats_unit,
             sort_order,
             reverse_sort,
             number_validators,
@@ -959,7 +959,7 @@ pub fn process_fees(
             CliFees::some(
                 result.context.slot,
                 *recent_blockhash,
-                fee_calculator.lamports_per_signature,
+                fee_calculator.carats_per_signature,
                 None,
                 None,
             )
@@ -972,7 +972,7 @@ pub fn process_fees(
         CliFees::some(
             result.context.slot,
             result.value.blockhash,
-            result.value.fee_calculator.lamports_per_signature,
+            result.value.fee_calculator.carats_per_signature,
             None,
             Some(result.value.last_valid_block_height),
         )
@@ -1345,7 +1345,7 @@ pub fn process_supply(
 
 pub fn process_total_supply(rpc_client: &RpcClient, _config: &CliConfig) -> ProcessResult {
     let supply = rpc_client.supply()?.value;
-    Ok(format!("{} GEMA", lamports_to_gema(supply.total)))
+    Ok(format!("{} GEMA", carats_to_gema(supply.total)))
 }
 
 pub fn process_get_transaction_count(rpc_client: &RpcClient, _config: &CliConfig) -> ProcessResult {
@@ -1356,7 +1356,7 @@ pub fn process_get_transaction_count(rpc_client: &RpcClient, _config: &CliConfig
 pub fn process_ping(
     rpc_client: &RpcClient,
     config: &CliConfig,
-    lamports: u64,
+    carats: u64,
     interval: &Duration,
     count: &Option<u64>,
     timeout: &Duration,
@@ -1407,14 +1407,14 @@ pub fn process_ping(
             .unwrap();
         blockhash_transaction_count += 1;
 
-        let build_message = |lamports| {
-            let ix = system_instruction::transfer(&config.signers[0].pubkey(), &to, lamports);
+        let build_message = |carats| {
+            let ix = system_instruction::transfer(&config.signers[0].pubkey(), &to, carats);
             Message::new(&[ix], Some(&config.signers[0].pubkey()))
         };
         let (message, _) = resolve_spend_tx_and_check_account_balance(
             rpc_client,
             false,
-            SpendAmount::Some(lamports),
+            SpendAmount::Some(carats),
             &blockhash,
             &config.signers[0].pubkey(),
             build_message,
@@ -1449,7 +1449,7 @@ pub fn process_ping(
                                 println!(
                                     "{}{}{} lamport(s) transferred: seq={:<3} time={:>4}ms signature={}",
                                     timestamp(),
-                                    CHECK_MARK, lamports, seq, elapsed_time_millis, signature
+                                    CHECK_MARK, carats, seq, elapsed_time_millis, signature
                                 );
                                 confirmed_count += 1;
                             }
@@ -1697,7 +1697,7 @@ pub fn process_show_gossip(rpc_client: &RpcClient, config: &CliConfig) -> Proces
 pub fn process_show_stakes(
     rpc_client: &RpcClient,
     config: &CliConfig,
-    use_lamports_unit: bool,
+    use_carats_unit: bool,
     vote_account_pubkeys: Option<&[Pubkey]>,
 ) -> ProcessResult {
     use crate::stake::build_stake_state;
@@ -1758,9 +1758,9 @@ pub fn process_show_stakes(
                         stake_accounts.push(CliKeyedStakeState {
                             stake_pubkey: stake_pubkey.to_string(),
                             stake_state: build_stake_state(
-                                stake_account.lamports,
+                                stake_account.carats,
                                 &stake_state,
-                                use_lamports_unit,
+                                use_carats_unit,
                                 &stake_history,
                                 &clock,
                             ),
@@ -1776,9 +1776,9 @@ pub fn process_show_stakes(
                         stake_accounts.push(CliKeyedStakeState {
                             stake_pubkey: stake_pubkey.to_string(),
                             stake_state: build_stake_state(
-                                stake_account.lamports,
+                                stake_account.carats,
                                 &stake_state,
-                                use_lamports_unit,
+                                use_carats_unit,
                                 &stake_history,
                                 &clock,
                             ),
@@ -1807,7 +1807,7 @@ pub fn process_wait_for_max_stake(
 pub fn process_show_validators(
     rpc_client: &RpcClient,
     config: &CliConfig,
-    use_lamports_unit: bool,
+    use_carats_unit: bool,
     validators_sort_order: CliValidatorsSortOrder,
     validators_reverse_sort: bool,
     number_validators: bool,
@@ -1958,7 +1958,7 @@ pub fn process_show_validators(
         validators_reverse_sort,
         number_validators,
         stake_by_version,
-        use_lamports_unit,
+        use_carats_unit,
     };
     Ok(config.output_format.formatted_string(&cli_validators))
 }
@@ -2043,24 +2043,24 @@ pub fn process_transaction_history(
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CliRentCalculation {
-    pub lamports_per_byte_year: u64,
-    pub lamports_per_epoch: u64,
-    pub rent_exempt_minimum_lamports: u64,
+    pub carats_per_byte_year: u64,
+    pub carats_per_epoch: u64,
+    pub rent_exempt_minimum_carats: u64,
     #[serde(skip)]
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
 }
 
 impl CliRentCalculation {
-    fn build_balance_message(&self, lamports: u64) -> String {
-        build_balance_message(lamports, self.use_lamports_unit, true)
+    fn build_balance_message(&self, carats: u64) -> String {
+        build_balance_message(carats, self.use_carats_unit, true)
     }
 }
 
 impl fmt::Display for CliRentCalculation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let per_byte_year = self.build_balance_message(self.lamports_per_byte_year);
-        let per_epoch = self.build_balance_message(self.lamports_per_epoch);
-        let exempt_minimum = self.build_balance_message(self.rent_exempt_minimum_lamports);
+        let per_byte_year = self.build_balance_message(self.carats_per_byte_year);
+        let per_epoch = self.build_balance_message(self.carats_per_epoch);
+        let exempt_minimum = self.build_balance_message(self.rent_exempt_minimum_carats);
         writeln_name_value(f, "Rent per byte-year:", &per_byte_year)?;
         writeln_name_value(f, "Rent per epoch:", &per_epoch)?;
         writeln_name_value(f, "Rent-exempt minimum:", &exempt_minimum)
@@ -2115,23 +2115,23 @@ pub fn process_calculate_rent(
     rpc_client: &RpcClient,
     config: &CliConfig,
     data_length: usize,
-    use_lamports_unit: bool,
+    use_carats_unit: bool,
 ) -> ProcessResult {
     let epoch_schedule = rpc_client.get_epoch_schedule()?;
     let rent_account = rpc_client.get_account(&sysvar::rent::id())?;
     let rent: Rent = rent_account.deserialize_data()?;
-    let rent_exempt_minimum_lamports = rent.minimum_balance(data_length);
+    let rent_exempt_minimum_carats = rent.minimum_balance(data_length);
     let seconds_per_tick = Duration::from_secs_f64(1.0 / clock::DEFAULT_TICKS_PER_SECOND as f64);
     let slots_per_year =
         timing::years_as_slots(1.0, &seconds_per_tick, clock::DEFAULT_TICKS_PER_SLOT);
     let slots_per_epoch = epoch_schedule.slots_per_epoch as f64;
     let years_per_epoch = slots_per_epoch / slots_per_year;
-    let (lamports_per_epoch, _) = rent.due(0, data_length, years_per_epoch);
+    let (carats_per_epoch, _) = rent.due(0, data_length, years_per_epoch);
     let cli_rent_calculation = CliRentCalculation {
-        lamports_per_byte_year: rent.lamports_per_byte_year,
-        lamports_per_epoch,
-        rent_exempt_minimum_lamports,
-        use_lamports_unit,
+        carats_per_byte_year: rent.carats_per_byte_year,
+        carats_per_epoch,
+        rent_exempt_minimum_carats,
+        use_carats_unit,
     };
 
     Ok(config.output_format.formatted_string(&cli_rent_calculation))
@@ -2300,7 +2300,7 @@ mod tests {
             parse_command(&test_ping, &default_signer, &mut None).unwrap(),
             CliCommandInfo {
                 command: CliCommand::Ping {
-                    lamports: 1,
+                    carats: 1,
                     interval: Duration::from_secs(1),
                     count: Some(2),
                     timeout: Duration::from_secs(3),

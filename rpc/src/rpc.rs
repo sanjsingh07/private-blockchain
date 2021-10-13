@@ -491,7 +491,7 @@ impl JsonRpcRequestProcessor {
                     return Some(RpcInflationReward {
                         epoch,
                         effective_slot: first_confirmed_block_in_epoch,
-                        amount: reward.lamports.abs() as u64,
+                        amount: reward.carats.abs() as u64,
                         post_balance: reward.post_balance,
                         commission: reward.commission,
                     });
@@ -758,9 +758,9 @@ impl JsonRpcRequestProcessor {
                     message: e.to_string(),
                 })?
                 .into_iter()
-                .map(|(address, lamports)| RpcAccountBalance {
+                .map(|(address, carats)| RpcAccountBalance {
                     address: address.to_string(),
-                    lamports,
+                    carats,
                 })
                 .collect::<Vec<RpcAccountBalance>>();
 
@@ -794,8 +794,8 @@ impl JsonRpcRequestProcessor {
             &bank,
             RpcSupply {
                 total: total_supply,
-                circulating: total_supply - non_circulating_supply.lamports,
-                non_circulating: non_circulating_supply.lamports,
+                circulating: total_supply - non_circulating_supply.carats,
+                non_circulating: non_circulating_supply.carats,
                 non_circulating_accounts,
             },
         ))
@@ -1559,7 +1559,7 @@ impl JsonRpcRequestProcessor {
                     return Ok(RpcStakeActivation {
                         state: StakeActivationState::Inactive,
                         active: 0,
-                        inactive: stake_account.lamports().saturating_sub(rent_exempt_reserve),
+                        inactive: stake_account.carats().saturating_sub(rent_exempt_reserve),
                     });
                 }
             }
@@ -3026,7 +3026,7 @@ pub mod rpc_full {
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
-            lamports: u64,
+            carats: u64,
             config: Option<RpcRequestAirdropConfig>,
         ) -> Result<String>;
 
@@ -3252,14 +3252,14 @@ pub mod rpc_full {
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
-            lamports: u64,
+            carats: u64,
             config: Option<RpcRequestAirdropConfig>,
         ) -> Result<String> {
             debug!("request_airdrop rpc request received");
             trace!(
-                "request_airdrop id={} lamports={} config: {:?}",
+                "request_airdrop id={} carats={} config: {:?}",
                 pubkey_str,
-                lamports,
+                carats,
                 &config
             );
 
@@ -3279,7 +3279,7 @@ pub mod rpc_full {
                 .unwrap_or(0);
 
             let transaction =
-                request_airdrop_transaction(&faucet_addr, &pubkey, lamports, blockhash).map_err(
+                request_airdrop_transaction(&faucet_addr, &pubkey, carats, blockhash).map_err(
                     |err| {
                         info!("request_airdrop_transaction failed: {:?}", err);
                         Error::internal_error()
@@ -4744,7 +4744,7 @@ pub mod tests {
             .expect("actual response deserialization");
         assert!(largest_accounts.contains(&RpcAccountBalance {
             address: alice.pubkey().to_string(),
-            lamports: alice_balance,
+            carats: alice_balance,
         }));
 
         // Get Bob balance
@@ -4758,7 +4758,7 @@ pub mod tests {
             .expect("actual response deserialization");
         assert!(largest_accounts.contains(&RpcAccountBalance {
             address: bob_pubkey.to_string(),
-            lamports: bob_balance,
+            carats: bob_balance,
         }));
 
         // Test Circulating/NonCirculating Filter
@@ -5035,7 +5035,7 @@ pub mod tests {
                 "context":{"slot":0},
                 "value":{
                     "owner": "11111111111111111111111111111111",
-                    "lamports": 20,
+                    "carats": 20,
                     "data": "",
                     "executable": false,
                     "rentEpoch": 0
@@ -5126,7 +5126,7 @@ pub mod tests {
                 "context":{"slot":0},
                 "value":[{
                     "owner": "11111111111111111111111111111111",
-                    "lamports": 20,
+                    "carats": 20,
                     "data": ["", "base64"],
                     "executable": false,
                     "rentEpoch": 0
@@ -5134,7 +5134,7 @@ pub mod tests {
                 null,
                 {
                     "owner": "11111111111111111111111111111111",
-                    "lamports": 42,
+                    "carats": 42,
                     "data": [base64::encode(&data), "base64"],
                     "executable": false,
                     "rentEpoch": 0
@@ -5246,7 +5246,7 @@ pub mod tests {
                         "pubkey": "{}",
                         "account": {{
                             "owner": "{}",
-                            "lamports": 20,
+                            "carats": 20,
                             "data": "",
                             "executable": false,
                             "rentEpoch": 0
@@ -5491,7 +5491,7 @@ pub mod tests {
                             "data": ["", "base64"],
                             "executable": false,
                             "owner": "11111111111111111111111111111111",
-                            "lamports": 1234,
+                            "carats": 1234,
                             "rentEpoch": 0
                         }
                     ],
@@ -5822,7 +5822,7 @@ pub mod tests {
             "value":{
                 "blockhash": blockhash.to_string(),
                 "feeCalculator": {
-                    "lamportsPerSignature": 0,
+                    "caratsPerSignature": 0,
                 }
             }},
             "id": 1
@@ -5853,7 +5853,7 @@ pub mod tests {
             "value":{
                 "blockhash": blockhash.to_string(),
                 "feeCalculator": {
-                    "lamportsPerSignature": 0,
+                    "caratsPerSignature": 0,
                 },
                 "lastValidSlot": MAX_RECENT_BLOCKHASHES,
                 "lastValidBlockHeight": MAX_RECENT_BLOCKHASHES,
@@ -6185,7 +6185,7 @@ pub mod tests {
             voting_keypair,
         } = create_genesis_config(TEST_MINT_LAMPORTS);
 
-        genesis_config.rent.lamports_per_byte_year = 50;
+        genesis_config.rent.carats_per_byte_year = 50;
         genesis_config.rent.exemption_threshold = 2.0;
         genesis_config.epoch_schedule =
             EpochSchedule::custom(TEST_SLOTS_PER_EPOCH, TEST_SLOTS_PER_EPOCH, false);
@@ -7140,7 +7140,7 @@ pub mod tests {
         };
         TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: account_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()
@@ -7159,7 +7159,7 @@ pub mod tests {
         };
         Mint::pack(mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: mint_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()
@@ -7236,7 +7236,7 @@ pub mod tests {
         };
         TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: account_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()
@@ -7455,7 +7455,7 @@ pub mod tests {
         };
         Mint::pack(mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: mint_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()
@@ -7477,7 +7477,7 @@ pub mod tests {
         };
         TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: account_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()
@@ -7541,7 +7541,7 @@ pub mod tests {
         };
         TokenAccount::pack(token_account, &mut account_data).unwrap();
         let token_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: account_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()
@@ -7560,7 +7560,7 @@ pub mod tests {
         };
         Mint::pack(mint_state, &mut mint_data).unwrap();
         let mint_account = AccountSharedData::from(Account {
-            lamports: 111,
+            carats: 111,
             data: mint_data.to_vec(),
             owner: spl_token_id_v2_0(),
             ..Account::default()

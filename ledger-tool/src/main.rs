@@ -45,8 +45,8 @@ use solana_sdk::{
     genesis_config::{ClusterType, GenesisConfig},
     hash::Hash,
     inflation::Inflation,
-    // native_token::{lamports_to_gema, gema_to_lamports, Sol},
-    native_token::{lamports_to_gema, gema_to_lamports, Gema},
+    // native_token::{carats_to_gema, gema_to_carats, Sol},
+    native_token::{carats_to_gema, gema_to_carats, Gema},
     pubkey::Pubkey,
     rent::Rent,
     shred_version::compute_shred_version,
@@ -91,7 +91,7 @@ fn output_slot_rewards(blockstore: &Blockstore, slot: Slot, method: &LedgerOutpu
                 );
 
                 for reward in rewards {
-                    let sign = if reward.lamports < 0 { "-" } else { "" };
+                    let sign = if reward.carats < 0 { "-" } else { "" };
                     println!(
                         "    {:<44}  {:^15}  {:<15}  {}   {}",
                         reward.pubkey,
@@ -103,9 +103,9 @@ fn output_slot_rewards(blockstore: &Blockstore, slot: Slot, method: &LedgerOutpu
                         format!(
                             "{}◎{:<14.9}",
                             sign,
-                            lamports_to_gema(reward.lamports.abs() as u64)
+                            carats_to_gema(reward.carats.abs() as u64)
                         ),
-                        format!("◎{:<18.9}", lamports_to_gema(reward.post_balance)),
+                        format!("◎{:<18.9}", carats_to_gema(reward.post_balance)),
                         reward
                             .commission
                             .map(|commission| format!("{:>9}%", commission))
@@ -430,7 +430,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
                         format!(
                             "\nvotes: {}, stake: {:.1} GEMA ({:.1}%)",
                             votes,
-                            lamports_to_gema(*stake),
+                            carats_to_gema(*stake),
                             *stake as f64 / *total_stake as f64 * 100.,
                         )
                     } else {
@@ -492,7 +492,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
             r#"  "last vote {}"[shape=box,label="Latest validator vote: {}\nstake: {} GEMA\nroot slot: {}\nvote history:\n{}"];"#,
             node_pubkey,
             node_pubkey,
-            lamports_to_gema(*stake),
+            carats_to_gema(*stake),
             vote_state.root_slot.unwrap_or(0),
             vote_state
                 .votes
@@ -525,7 +525,7 @@ fn graph_forks(bank_forks: &BankForks, include_all_votes: bool) -> String {
         dot.push(format!(
             r#"    "..."[label="...\nvotes: {}, stake: {:.1} GEMA {:.1}%"];"#,
             absent_votes,
-            lamports_to_gema(absent_stake),
+            carats_to_gema(absent_stake),
             absent_stake as f64 / lowest_total_stake as f64 * 100.,
         ));
     }
@@ -972,10 +972,10 @@ fn main() {
     .help("The maximum number of incremental snapshot archives to hold on to when purging older snapshots.");
 
     let rent = Rent::default();
-    let default_bootstrap_validator_lamports = &gema_to_lamports(500.0)
+    let default_bootstrap_validator_carats = &gema_to_carats(500.0)
         .max(VoteState::get_rent_exempt_reserve(&rent))
         .to_string();
-    let default_bootstrap_validator_stake_lamports = &gema_to_lamports(0.5)
+    let default_bootstrap_validator_stake_carats = &gema_to_carats(0.5)
         .max(StakeState::get_rent_exempt_reserve(&rent))
         .to_string();
 
@@ -1286,13 +1286,13 @@ fn main() {
                            which could be a slot in a galaxy far far away"),
             )
             .arg(
-                Arg::with_name("faucet_lamports")
+                Arg::with_name("faucet_carats")
                     .short("t")
-                    .long("faucet-lamports")
+                    .long("faucet-carats")
                     .value_name("LAMPORTS")
                     .takes_value(true)
                     .requires("faucet_pubkey")
-                    .help("Number of lamports to assign to the faucet"),
+                    .help("Number of carats to assign to the faucet"),
             )
             .arg(
                 Arg::with_name("faucet_pubkey")
@@ -1301,7 +1301,7 @@ fn main() {
                     .value_name("PUBKEY")
                     .takes_value(true)
                     .validator(is_pubkey_or_keypair)
-                    .requires("faucet_lamports")
+                    .requires("faucet_carats")
                     .help("Path to file containing the faucet's pubkey"),
             )
             .arg(
@@ -1327,20 +1327,20 @@ fn main() {
                     ),
             )
             .arg(
-                Arg::with_name("bootstrap_validator_lamports")
-                    .long("bootstrap-validator-lamports")
+                Arg::with_name("bootstrap_validator_carats")
+                    .long("bootstrap-validator-carats")
                     .value_name("LAMPORTS")
                     .takes_value(true)
-                    .default_value(default_bootstrap_validator_lamports)
-                    .help("Number of lamports to assign to the bootstrap validator"),
+                    .default_value(default_bootstrap_validator_carats)
+                    .help("Number of carats to assign to the bootstrap validator"),
             )
             .arg(
-                Arg::with_name("bootstrap_validator_stake_lamports")
-                    .long("bootstrap-validator-stake-lamports")
+                Arg::with_name("bootstrap_validator_stake_carats")
+                    .long("bootstrap-validator-stake-carats")
                     .value_name("LAMPORTS")
                     .takes_value(true)
-                    .default_value(default_bootstrap_validator_stake_lamports)
-                    .help("Number of lamports to assign to the bootstrap validator's stake account"),
+                    .default_value(default_bootstrap_validator_stake_carats)
+                    .help("Number of carats to assign to the bootstrap validator's stake account"),
             )
             .arg(
                 Arg::with_name("rent_burn_percentage")
@@ -2039,23 +2039,23 @@ fn main() {
             let new_hard_forks = hardforks_of(arg_matches, "hard_forks");
 
             let faucet_pubkey = pubkey_of(arg_matches, "faucet_pubkey");
-            let faucet_lamports = value_t!(arg_matches, "faucet_lamports", u64).unwrap_or(0);
+            let faucet_carats = value_t!(arg_matches, "faucet_carats", u64).unwrap_or(0);
 
             let rent_burn_percentage = value_t!(arg_matches, "rent_burn_percentage", u8);
             let hashes_per_tick = arg_matches.value_of("hashes_per_tick");
 
             let bootstrap_stake_authorized_pubkey =
                 pubkey_of(arg_matches, "bootstrap_stake_authorized_pubkey");
-            let bootstrap_validator_lamports =
-                value_t_or_exit!(arg_matches, "bootstrap_validator_lamports", u64);
-            let bootstrap_validator_stake_lamports =
-                value_t_or_exit!(arg_matches, "bootstrap_validator_stake_lamports", u64);
-            let minimum_stake_lamports = StakeState::get_rent_exempt_reserve(&rent);
-            if bootstrap_validator_stake_lamports < minimum_stake_lamports {
+            let bootstrap_validator_carats =
+                value_t_or_exit!(arg_matches, "bootstrap_validator_carats", u64);
+            let bootstrap_validator_stake_carats =
+                value_t_or_exit!(arg_matches, "bootstrap_validator_stake_carats", u64);
+            let minimum_stake_carats = StakeState::get_rent_exempt_reserve(&rent);
+            if bootstrap_validator_stake_carats < minimum_stake_carats {
                 eprintln!(
-                    "Error: insufficient --bootstrap-validator-stake-lamports. \
+                    "Error: insufficient --bootstrap-validator-stake-carats. \
                            Minimum amount is {}",
-                    minimum_stake_lamports
+                    minimum_stake_carats
                 );
                 exit(1);
             }
@@ -2157,7 +2157,7 @@ fn main() {
                     if let Some(faucet_pubkey) = faucet_pubkey {
                         bank.store_account(
                             &faucet_pubkey,
-                            &AccountSharedData::new(faucet_lamports, 0, &system_program::id()),
+                            &AccountSharedData::new(faucet_carats, 0, &system_program::id()),
                         );
                     }
 
@@ -2167,7 +2167,7 @@ fn main() {
                             .unwrap()
                             .into_iter()
                         {
-                            account.set_lamports(0);
+                            account.set_carats(0);
                             bank.store_account(&address, &account);
                         }
                     }
@@ -2181,7 +2181,7 @@ fn main() {
                             exit(1);
                         });
 
-                        account.set_lamports(0);
+                        account.set_carats(0);
                         bank.store_account(&address, &account);
                     }
 
@@ -2229,7 +2229,7 @@ fn main() {
                             .unwrap()
                             .into_iter()
                         {
-                            account.set_lamports(0);
+                            account.set_carats(0);
                             bank.store_account(&address, &account);
                         }
 
@@ -2248,7 +2248,7 @@ fn main() {
                             bank.store_account(
                                 identity_pubkey,
                                 &AccountSharedData::new(
-                                    bootstrap_validator_lamports,
+                                    bootstrap_validator_carats,
                                     0,
                                     &system_program::id(),
                                 ),
@@ -2271,7 +2271,7 @@ fn main() {
                                     vote_pubkey,
                                     &vote_account,
                                     &rent,
-                                    bootstrap_validator_stake_lamports,
+                                    bootstrap_validator_stake_carats,
                                 ),
                             );
                             bank.store_account(vote_pubkey, &vote_account);
@@ -2400,7 +2400,7 @@ fn main() {
                     for (pubkey, (account, slot)) in accounts.into_iter() {
                         let data_len = account.data().len();
                         println!("{}:", pubkey);
-                        println!("  - balance: {} GEMA", lamports_to_gema(account.lamports()));
+                        println!("  - balance: {} GEMA", carats_to_gema(account.carats()));
                         println!("  - owner: '{}'", account.owner());
                         println!("  - executable: {}", account.executable());
                         println!("  - slot: {}", slot);
@@ -2651,17 +2651,17 @@ fn main() {
                                     account,
                                     base_bank
                                         .get_account(pubkey)
-                                        .map(|a| a.lamports())
+                                        .map(|a| a.carats())
                                         .unwrap_or_default(),
                                 )
                             })
                             .collect::<Vec<_>>();
                         rewarded_accounts.sort_unstable_by_key(
-                            |(pubkey, account, base_lamports)| {
+                            |(pubkey, account, base_carats)| {
                                 (
                                     *account.owner(),
-                                    *base_lamports,
-                                    account.lamports() - base_lamports,
+                                    *base_carats,
+                                    account.carats() - base_carats,
                                     *pubkey,
                                 )
                             },
@@ -2679,7 +2679,7 @@ fn main() {
                             .map(|pubkey| (**pubkey, warped_bank.get_account(pubkey).unwrap()))
                             .collect::<Vec<_>>();
                         unchanged_accounts.sort_unstable_by_key(|(pubkey, account)| {
-                            (*account.owner(), account.lamports(), *pubkey)
+                            (*account.owner(), account.carats(), *pubkey)
                         });
                         let unchanged_accounts = unchanged_accounts.into_iter();
 
@@ -2696,17 +2696,17 @@ fn main() {
                             }
 
                             if let Some(base_account) = base_bank.get_account(&pubkey) {
-                                let delta = warped_account.lamports() - base_account.lamports();
+                                let delta = warped_account.carats() - base_account.carats();
                                 let detail = stake_calcuration_details.get(&pubkey);
                                 println!(
                                     "{:<45}({}): {} => {} (+{} {:>4.9}%) {:?}",
                                     format!("{}", pubkey), // format! is needed to pad/justify correctly.
                                     base_account.owner(),
-                                    Gema(base_account.lamports()),
-                                    Gema(warped_account.lamports()),
+                                    Gema(base_account.carats()),
+                                    Gema(warped_account.carats()),
                                     Gema(delta),
-                                    ((warped_account.lamports() as f64)
-                                        / (base_account.lamports() as f64)
+                                    ((warped_account.carats() as f64)
+                                        / (base_account.carats() as f64)
                                         * 100_f64)
                                         - 100_f64,
                                     detail,
@@ -2765,8 +2765,8 @@ fn main() {
                                             rewarded_epoch: base_bank.epoch(),
                                             account: format!("{}", pubkey),
                                             owner: format!("{}", base_account.owner()),
-                                            old_balance: base_account.lamports(),
-                                            new_balance: warped_account.lamports(),
+                                            old_balance: base_account.carats(),
+                                            new_balance: warped_account.carats(),
                                             data_size: base_account.data().len(),
                                             delegation: format_or_na(detail.map(|d| d.voter)),
                                             delegation_owner: format_or_na(
@@ -2837,7 +2837,7 @@ fn main() {
                             }
                         }
                         if overall_delta > 0 {
-                            println!("Sum of lamports changes: {}", Gema(overall_delta));
+                            println!("Sum of carats changes: {}", Gema(overall_delta));
                         }
                     } else {
                         if arg_matches.is_present("recalculate_capitalization") {

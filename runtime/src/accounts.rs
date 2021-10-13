@@ -316,7 +316,7 @@ impl Accounts {
                         }
 
                         tx_rent += rent;
-                        rent_debits.push(key, rent, account.lamports());
+                        rent_debits.push(key, rent, account.carats());
 
                         account
                     }
@@ -336,7 +336,7 @@ impl Accounts {
                     warn!("Payer index should be 0! {:?}", tx);
                 }
                 let payer_account = &mut accounts[payer_index].1;
-                if payer_account.lamports() == 0 {
+                if payer_account.carats() == 0 {
                     error_counters.account_not_found += 1;
                     return Err(TransactionError::AccountNotFound);
                 }
@@ -352,12 +352,12 @@ impl Accounts {
                     }
                 };
 
-                if payer_account.lamports() < fee + min_balance {
+                if payer_account.carats() < fee + min_balance {
                     error_counters.insufficient_funds += 1;
                     return Err(TransactionError::InsufficientFundsForFee);
                 }
                 payer_account
-                    .checked_sub_lamports(fee)
+                    .checked_sub_carats(fee)
                     .map_err(|_| TransactionError::InsufficientFundsForFee)?;
 
                 let program_indices = message
@@ -524,7 +524,7 @@ impl Accounts {
         account: AccountSharedData,
         slot: Slot,
     ) -> Option<(AccountSharedData, Slot)> {
-        if account.lamports() > 0 {
+        if account.carats() > 0 {
             Some((account, slot))
         } else {
             None
@@ -643,7 +643,7 @@ impl Accounts {
             bank_id,
             |collector: &mut BinaryHeap<Reverse<(u64, Pubkey)>>, option| {
                 if let Some((pubkey, account, _slot)) = option {
-                    if account.lamports() == 0 {
+                    if account.carats() == 0 {
                         return;
                     }
                     let contains_address = filter_by_address.contains(pubkey);
@@ -658,12 +658,12 @@ impl Accounts {
                         let Reverse(entry) = collector
                             .peek()
                             .expect("BinaryHeap::peek should succeed when len > 0");
-                        if *entry >= (account.lamports(), *pubkey) {
+                        if *entry >= (account.carats(), *pubkey) {
                             return;
                         }
                         collector.pop();
                     }
-                    collector.push(Reverse((account.lamports(), *pubkey)));
+                    collector.push(Reverse((account.carats(), *pubkey)));
                 }
             },
         )?;
@@ -696,17 +696,17 @@ impl Accounts {
     }
 
     #[must_use]
-    pub fn verify_bank_hash_and_lamports(
+    pub fn verify_bank_hash_and_carats(
         &self,
         slot: Slot,
         ancestors: &Ancestors,
-        total_lamports: u64,
+        total_carats: u64,
         test_hash_calculation: bool,
     ) -> bool {
-        if let Err(err) = self.accounts_db.verify_bank_hash_and_lamports(
+        if let Err(err) = self.accounts_db.verify_bank_hash_and_carats(
             slot,
             ancestors,
-            total_lamports,
+            total_carats,
             test_hash_calculation,
         ) {
             warn!("verify_bank_hash failed: {:?}", err);
@@ -716,10 +716,10 @@ impl Accounts {
         }
     }
 
-    fn is_loadable(lamports: u64) -> bool {
+    fn is_loadable(carats: u64) -> bool {
         // Don't ever load zero lamport accounts into runtime because
         // the existence of zero-lamport accounts are never deterministic!!
-        lamports > 0
+        carats > 0
     }
 
     fn load_while_filtering<F: Fn(&AccountSharedData) -> bool>(
@@ -728,7 +728,7 @@ impl Accounts {
         filter: F,
     ) {
         if let Some(mapped_account_tuple) = some_account_tuple
-            .filter(|(_, account, _)| Self::is_loadable(account.lamports()) && filter(account))
+            .filter(|(_, account, _)| Self::is_loadable(account.carats()) && filter(account))
             .map(|(pubkey, account, _slot)| (*pubkey, account))
         {
             collector.push(mapped_account_tuple)
@@ -805,7 +805,7 @@ impl Accounts {
             bank_id,
             |collector: &mut Vec<(Pubkey, AccountSharedData, Slot)>, some_account_tuple| {
                 if let Some((pubkey, account, slot)) = some_account_tuple
-                    .filter(|(_, account, _)| Self::is_loadable(account.lamports()))
+                    .filter(|(_, account, _)| Self::is_loadable(account.carats()))
                 {
                     collector.push((*pubkey, account, slot))
                 }
@@ -1076,7 +1076,7 @@ impl Accounts {
                         loaded_transaction.rent += rent;
                         loaded_transaction
                             .rent_debits
-                            .push(key, rent, account.lamports());
+                            .push(key, rent, account.carats());
                     }
                     accounts.push((&*key, &*account));
                 }
@@ -1436,7 +1436,7 @@ mod tests {
             &EpochSchedule::default(),
             500_000.0,
             &Rent {
-                lamports_per_byte_year: 42,
+                carats_per_byte_year: 42,
                 ..Rent::default()
             },
         );
@@ -1474,10 +1474,10 @@ mod tests {
         assert_eq!(loaded_accounts.len(), 1);
         let (load_res, _nonce_rollback) = &loaded_accounts[0];
         let loaded_transaction = load_res.as_ref().unwrap();
-        assert_eq!(loaded_transaction.accounts[0].1.lamports(), min_balance);
+        assert_eq!(loaded_transaction.accounts[0].1.carats(), min_balance);
 
         // Fee leaves zero balance fails
-        accounts[0].1.set_lamports(min_balance);
+        accounts[0].1.set_carats(min_balance);
         let loaded_accounts = load_accounts_with_fee_and_rent(
             tx.clone(),
             &accounts,
@@ -1490,7 +1490,7 @@ mod tests {
         assert_eq!(*load_res, Err(TransactionError::InsufficientFundsForFee));
 
         // Fee leaves non-zero, but sub-min_balance balance fails
-        accounts[0].1.set_lamports(3 * min_balance / 2);
+        accounts[0].1.set_carats(3 * min_balance / 2);
         let loaded_accounts = load_accounts_with_fee_and_rent(
             tx,
             &accounts,
@@ -2517,14 +2517,14 @@ mod tests {
         ));
         let account = AccountSharedData::new_data(42, &data, &system_program::id()).unwrap();
         let mut pre_account = account.clone();
-        pre_account.set_lamports(43);
+        pre_account.set_carats(43);
         (
             Pubkey::default(),
             pre_account,
             account,
             Hash::new(&[1u8; 32]),
             FeeCalculator {
-                lamports_per_signature: 1234,
+                carats_per_signature: 1234,
             },
             None,
         )
@@ -2802,8 +2802,8 @@ mod tests {
             .cloned()
             .unwrap();
         assert_eq!(
-            collected_nonce_account.lamports(),
-            nonce_account_pre.lamports(),
+            collected_nonce_account.carats(),
+            nonce_account_pre.carats(),
         );
         assert!(nonce_account::verify_nonce_account(
             &collected_nonce_account,
@@ -2909,8 +2909,8 @@ mod tests {
             .cloned()
             .unwrap();
         assert_eq!(
-            collected_nonce_account.lamports(),
-            nonce_account_pre.lamports()
+            collected_nonce_account.carats(),
+            nonce_account_pre.carats()
         );
         assert!(nonce_account::verify_nonce_account(
             &collected_nonce_account,

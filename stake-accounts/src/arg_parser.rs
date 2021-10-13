@@ -8,7 +8,7 @@ use solana_clap_utils::{
     input_validators::{is_amount, is_rfc3339_datetime, is_valid_pubkey, is_valid_signer},
 };
 use solana_cli_config::CONFIG_FILE;
-use solana_sdk::native_token::gema_to_lamports;
+use solana_sdk::native_token::gema_to_carats;
 use std::ffi::OsString;
 use std::process::exit;
 
@@ -280,7 +280,7 @@ fn parse_new_args(matches: &ArgMatches<'_>) -> NewArgs<String, String> {
     NewArgs {
         fee_payer: value_t_or_exit!(matches, "fee_payer", String),
         funding_keypair: value_t_or_exit!(matches, "funding_keypair", String),
-        lamports: gema_to_lamports(value_t_or_exit!(matches, "amount", f64)),
+        carats: gema_to_carats(value_t_or_exit!(matches, "amount", f64)),
         base_keypair: value_t_or_exit!(matches, "base_keypair", String),
         stake_authority: value_t_or_exit!(matches, "stake_authority", String),
         withdraw_authority: value_t_or_exit!(matches, "withdraw_authority", String),

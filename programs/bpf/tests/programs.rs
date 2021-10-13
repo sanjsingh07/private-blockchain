@@ -602,23 +602,23 @@ fn test_program_bpf_duplicate_accounts() {
         bank.store_account(&pubkey, &account);
         let instruction = Instruction::new_with_bytes(program_id, &[4], account_metas.clone());
         let result = bank_client.send_and_confirm_instruction(&mint_keypair, instruction);
-        let lamports = bank_client.get_balance(&pubkey).unwrap();
+        let carats = bank_client.get_balance(&pubkey).unwrap();
         assert!(result.is_ok());
-        assert_eq!(lamports, 11);
+        assert_eq!(carats, 11);
 
         bank.store_account(&pubkey, &account);
         let instruction = Instruction::new_with_bytes(program_id, &[5], account_metas.clone());
         let result = bank_client.send_and_confirm_instruction(&mint_keypair, instruction);
-        let lamports = bank_client.get_balance(&pubkey).unwrap();
+        let carats = bank_client.get_balance(&pubkey).unwrap();
         assert!(result.is_ok());
-        assert_eq!(lamports, 12);
+        assert_eq!(carats, 12);
 
         bank.store_account(&pubkey, &account);
         let instruction = Instruction::new_with_bytes(program_id, &[6], account_metas.clone());
         let result = bank_client.send_and_confirm_instruction(&mint_keypair, instruction);
-        let lamports = bank_client.get_balance(&pubkey).unwrap();
+        let carats = bank_client.get_balance(&pubkey).unwrap();
         assert!(result.is_ok());
-        assert_eq!(lamports, 13);
+        assert_eq!(carats, 13);
 
         let keypair = Keypair::new();
         let pubkey = keypair.pubkey();

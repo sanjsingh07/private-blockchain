@@ -70,7 +70,7 @@ pub enum InstructionError {
     #[error("instruction modified the program id of an account")]
     ModifiedProgramId,
 
-    /// Program spent the lamports of an account that doesn't belong to it
+    /// Program spent the carats of an account that doesn't belong to it
     #[error("instruction spent from the balance of an account it does not own")]
     ExternalAccountLamportSpend,
 
@@ -78,7 +78,7 @@ pub enum InstructionError {
     #[error("instruction modified data of an account it does not own")]
     ExternalAccountDataModified,
 
-    /// Read-only account's lamports modified
+    /// Read-only account's carats modified
     #[error("instruction changed the balance of a read-only account")]
     ReadonlyLamportChange,
 
@@ -140,7 +140,7 @@ pub enum InstructionError {
     #[error("instruction changed executable accounts data")]
     ExecutableDataModified,
 
-    /// Executable account's lamports modified
+    /// Executable account's carats modified
     #[error("instruction changed the balance of a executable account")]
     ExecutableLamportChange,
 
@@ -216,8 +216,8 @@ pub enum InstructionError {
     #[error("Failed to serialize or deserialize account data: {0}")]
     BorshIoError(String),
 
-    /// An account does not have enough lamports to be rent-exempt
-    #[error("An account does not have enough lamports to be rent-exempt")]
+    /// An account does not have enough carats to be rent-exempt
+    #[error("An account does not have enough carats to be rent-exempt")]
     AccountNotRentExempt,
 
     /// Invalid account owner

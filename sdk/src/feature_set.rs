@@ -238,7 +238,7 @@ lazy_static! {
         (stake_program_v4::id(), "solana_stake_program v4"),
         (secp256k1_recover_syscall_enabled::id(), "secp256k1_recover syscall"),
         (add_missing_program_error_mappings::id(), "add missing program error mappings"),
-        (system_transfer_zero_check::id(), "perform all checks for transfers of 0 lamports"),
+        (system_transfer_zero_check::id(), "perform all checks for transfers of 0 carats"),
         (blake3_syscall_enabled::id(), "blake3 syscall"),
         (dedupe_config_program_signers::id(), "dedupe config program signers"),
         (deterministic_shred_seed_enabled::id(), "deterministic shred seed"),

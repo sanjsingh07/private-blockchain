@@ -14,7 +14,7 @@ use {
 };
 
 pub struct NonCirculatingSupply {
-    pub lamports: u64,
+    pub carats: u64,
     pub accounts: Vec<Pubkey>,
 }
 
@@ -68,13 +68,13 @@ pub fn calculate_non_circulating_supply(bank: &Arc<Bank>) -> ScanResult<NonCircu
         }
     }
 
-    let lamports = non_circulating_accounts_set
+    let carats = non_circulating_accounts_set
         .iter()
         .map(|pubkey| bank.get_balance(pubkey))
         .sum();
 
     Ok(NonCirculatingSupply {
-        lamports,
+        carats,
         accounts: non_circulating_accounts_set.into_iter().collect(),
     })
 }
@@ -282,7 +282,7 @@ mod tests {
 
         let non_circulating_supply = calculate_non_circulating_supply(&bank).unwrap();
         assert_eq!(
-            non_circulating_supply.lamports,
+            non_circulating_supply.carats,
             (num_non_circulating_accounts + num_stake_accounts) * balance
         );
         assert_eq!(
@@ -300,7 +300,7 @@ mod tests {
         }
         let non_circulating_supply = calculate_non_circulating_supply(&bank).unwrap();
         assert_eq!(
-            non_circulating_supply.lamports,
+            non_circulating_supply.carats,
             (num_non_circulating_accounts * new_balance) + (num_stake_accounts * balance)
         );
         assert_eq!(
@@ -315,7 +315,7 @@ mod tests {
         assert_eq!(bank.epoch(), 1);
         let non_circulating_supply = calculate_non_circulating_supply(&bank).unwrap();
         assert_eq!(
-            non_circulating_supply.lamports,
+            non_circulating_supply.carats,
             num_non_circulating_accounts * new_balance
         );
         assert_eq!(

@@ -25,7 +25,7 @@ pub trait NonceKeyedAccount {
     ) -> Result<(), InstructionError>;
     fn withdraw_nonce_account(
         &self,
-        lamports: u64,
+        carats: u64,
         to: &KeyedAccount,
         rent: &Rent,
         signers: &HashSet<Pubkey>,
@@ -99,7 +99,7 @@ impl<'a> NonceKeyedAccount for KeyedAccount<'a> {
 
     fn withdraw_nonce_account(
         &self,
-        lamports: u64,
+        carats: u64,
         to: &KeyedAccount,
         rent: &Rent,
         signers: &HashSet<Pubkey>,
@@ -109,19 +109,19 @@ impl<'a> NonceKeyedAccount for KeyedAccount<'a> {
             .is_feature_active(&feature_set::merge_nonce_error_into_system_error::id());
         let signer = match AccountUtilsState::<Versions>::state(self)?.convert_to_current() {
             State::Uninitialized => {
-                if lamports > self.lamports()? {
+                if carats > self.carats()? {
                     ic_msg!(
                         invoke_context,
-                        "Withdraw nonce account: insufficient lamports {}, need {}",
-                        self.lamports()?,
-                        lamports,
+                        "Withdraw nonce account: insufficient carats {}, need {}",
+                        self.carats()?,
+                        carats,
                     );
                     return Err(InstructionError::InsufficientFunds);
                 }
                 *self.unsigned_key()
             }
             State::Initialized(ref data) => {
-                if lamports == self.lamports()? {
+                if carats == self.carats()? {
                     if data.blockhash == *invoke_context.get_blockhash() {
                         ic_msg!(
                             invoke_context,
@@ -135,12 +135,12 @@ impl<'a> NonceKeyedAccount for KeyedAccount<'a> {
                     self.set_state(&Versions::new_current(State::Uninitialized))?;
                 } else {
                     let min_balance = rent.minimum_balance(self.data_len()?);
-                    let amount = checked_add(lamports, min_balance)?;
-                    if amount > self.lamports()? {
+                    let amount = checked_add(carats, min_balance)?;
+                    if amount > self.carats()? {
                         ic_msg!(
                             invoke_context,
-                            "Withdraw nonce account: insufficient lamports {}, need {}",
-                            self.lamports()?,
+                            "Withdraw nonce account: insufficient carats {}, need {}",
+                            self.carats()?,
                             amount,
                         );
                         return Err(InstructionError::InsufficientFunds);
@@ -159,16 +159,16 @@ impl<'a> NonceKeyedAccount for KeyedAccount<'a> {
             return Err(InstructionError::MissingRequiredSignature);
         }
 
-        let nonce_balance = self.try_account_ref_mut()?.lamports();
-        self.try_account_ref_mut()?.set_lamports(
+        let nonce_balance = self.try_account_ref_mut()?.carats();
+        self.try_account_ref_mut()?.set_carats(
             nonce_balance
-                .checked_sub(lamports)
+                .checked_sub(carats)
                 .ok_or(InstructionError::ArithmeticOverflow)?,
         );
-        let to_balance = to.try_account_ref_mut()?.lamports();
-        to.try_account_ref_mut()?.set_lamports(
+        let to_balance = to.try_account_ref_mut()?.carats();
+        to.try_account_ref_mut()?.set_carats(
             to_balance
-                .checked_add(lamports)
+                .checked_add(carats)
                 .ok_or(InstructionError::ArithmeticOverflow)?,
         );
 
@@ -186,11 +186,11 @@ impl<'a> NonceKeyedAccount for KeyedAccount<'a> {
         match AccountUtilsState::<Versions>::state(self)?.convert_to_current() {
             State::Uninitialized => {
                 let min_balance = rent.minimum_balance(self.data_len()?);
-                if self.lamports()? < min_balance {
+                if self.carats()? < min_balance {
                     ic_msg!(
                         invoke_context,
-                        "Initialize nonce account: insufficient lamports {}, need {}",
-                        self.lamports()?,
+                        "Initialize nonce account: insufficient carats {}, need {}",
+                        self.carats()?,
                         min_balance
                     );
                     return Err(InstructionError::InsufficientFunds);
@@ -256,12 +256,12 @@ impl<'a> NonceKeyedAccount for KeyedAccount<'a> {
 }
 
 /// Convenience function for working with keyed accounts in tests
-pub fn with_test_keyed_account<F>(lamports: u64, signer: bool, f: F)
+pub fn with_test_keyed_account<F>(carats: u64, signer: bool, f: F)
 where
     F: Fn(&KeyedAccount),
 {
     let pubkey = Pubkey::new_unique();
-    let account = create_account(lamports);
+    let account = create_account(carats);
     let keyed_account = KeyedAccount::new(&pubkey, signer, &account);
     f(&keyed_account)
 }
@@ -304,11 +304,11 @@ mod test {
     #[test]
     fn keyed_account_expected_behavior() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |keyed_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |keyed_account| {
             let data = nonce::state::Data {
                 authority: *keyed_account.unsigned_key(),
                 ..nonce::state::Data::default()
@@ -365,13 +365,13 @@ mod test {
             assert_eq!(state, State::Initialized(data));
             with_test_keyed_account(42, false, |to_keyed| {
                 let invoke_context = create_invoke_context_with_blockhash(0);
-                let withdraw_lamports = keyed_account.account.borrow().lamports();
-                let expect_nonce_lamports =
-                    keyed_account.account.borrow().lamports() - withdraw_lamports;
-                let expect_to_lamports = to_keyed.account.borrow().lamports() + withdraw_lamports;
+                let withdraw_carats = keyed_account.account.borrow().carats();
+                let expect_nonce_carats =
+                    keyed_account.account.borrow().carats() - withdraw_carats;
+                let expect_to_carats = to_keyed.account.borrow().carats() + withdraw_carats;
                 keyed_account
                     .withdraw_nonce_account(
-                        withdraw_lamports,
+                        withdraw_carats,
                         to_keyed,
                         &rent,
                         &signers,
@@ -380,11 +380,11 @@ mod test {
                     .unwrap();
                 // Empties Account balance
                 assert_eq!(
-                    keyed_account.account.borrow().lamports(),
-                    expect_nonce_lamports
+                    keyed_account.account.borrow().carats(),
+                    expect_nonce_carats
                 );
                 // Account balance goes to `to`
-                assert_eq!(to_keyed.account.borrow().lamports(), expect_to_lamports);
+                assert_eq!(to_keyed.account.borrow().carats(), expect_to_carats);
                 let state = AccountUtilsState::<Versions>::state(keyed_account)
                     .unwrap()
                     .convert_to_current();
@@ -397,11 +397,11 @@ mod test {
     #[test]
     fn nonce_inx_initialized_account_not_signer_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_account| {
             let invoke_context = create_invoke_context_with_blockhash(31);
             let authority = *nonce_account.unsigned_key();
             nonce_account
@@ -429,11 +429,11 @@ mod test {
     #[test]
     fn nonce_inx_too_early_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |keyed_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |keyed_account| {
             let mut signers = HashSet::new();
             signers.insert(*keyed_account.signer_key().unwrap());
             let invoke_context = create_invoke_context_with_blockhash(63);
@@ -449,11 +449,11 @@ mod test {
     #[test]
     fn nonce_inx_uninitialized_account_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |keyed_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |keyed_account| {
             let mut signers = HashSet::new();
             signers.insert(*keyed_account.signer_key().unwrap());
             let invoke_context = create_invoke_context_with_blockhash(63);
@@ -465,11 +465,11 @@ mod test {
     #[test]
     fn nonce_inx_independent_nonce_authority_ok() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_account| {
             with_test_keyed_account(42, true, |nonce_authority| {
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_account.signer_key().unwrap());
@@ -490,11 +490,11 @@ mod test {
     #[test]
     fn nonce_inx_no_nonce_authority_sig_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_account| {
             with_test_keyed_account(42, false, |nonce_authority| {
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_account.signer_key().unwrap());
@@ -512,11 +512,11 @@ mod test {
     #[test]
     fn withdraw_inx_unintialized_acc_ok() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let state = AccountUtilsState::<Versions>::state(nonce_keyed)
                 .unwrap()
                 .convert_to_current();
@@ -525,13 +525,13 @@ mod test {
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
                 let invoke_context = create_invoke_context_with_blockhash(0);
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports();
-                let expect_nonce_lamports =
-                    nonce_keyed.account.borrow().lamports() - withdraw_lamports;
-                let expect_to_lamports = to_keyed.account.borrow().lamports() + withdraw_lamports;
+                let withdraw_carats = nonce_keyed.account.borrow().carats();
+                let expect_nonce_carats =
+                    nonce_keyed.account.borrow().carats() - withdraw_carats;
+                let expect_to_carats = to_keyed.account.borrow().carats() + withdraw_carats;
                 nonce_keyed
                     .withdraw_nonce_account(
-                        withdraw_lamports,
+                        withdraw_carats,
                         to_keyed,
                         &rent,
                         &signers,
@@ -546,11 +546,11 @@ mod test {
                 assert_eq!(state, State::Uninitialized);
                 // Empties Account balance
                 assert_eq!(
-                    nonce_keyed.account.borrow().lamports(),
-                    expect_nonce_lamports
+                    nonce_keyed.account.borrow().carats(),
+                    expect_nonce_carats
                 );
                 // Account balance goes to `to`
-                assert_eq!(to_keyed.account.borrow().lamports(), expect_to_lamports);
+                assert_eq!(to_keyed.account.borrow().carats(), expect_to_carats);
             })
         })
     }
@@ -558,11 +558,11 @@ mod test {
     #[test]
     fn withdraw_inx_unintialized_acc_unsigned_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, false, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, false, |nonce_keyed| {
             let state = AccountUtilsState::<Versions>::state(nonce_keyed)
                 .unwrap()
                 .convert_to_current();
@@ -570,9 +570,9 @@ mod test {
             with_test_keyed_account(42, false, |to_keyed| {
                 let signers = HashSet::new();
                 let invoke_context = create_invoke_context_with_blockhash(0);
-                let lamports = nonce_keyed.account.borrow().lamports();
+                let carats = nonce_keyed.account.borrow().carats();
                 let result = nonce_keyed.withdraw_nonce_account(
-                    lamports,
+                    carats,
                     to_keyed,
                     &rent,
                     &signers,
@@ -586,11 +586,11 @@ mod test {
     #[test]
     fn withdraw_inx_unintialized_acc_insuff_funds_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let state = AccountUtilsState::<Versions>::state(nonce_keyed)
                 .unwrap()
                 .convert_to_current();
@@ -599,9 +599,9 @@ mod test {
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
                 let invoke_context = create_invoke_context_with_blockhash(0);
-                let lamports = nonce_keyed.account.borrow().lamports() + 1;
+                let carats = nonce_keyed.account.borrow().carats() + 1;
                 let result = nonce_keyed.withdraw_nonce_account(
-                    lamports,
+                    carats,
                     to_keyed,
                     &rent,
                     &signers,
@@ -615,22 +615,22 @@ mod test {
     #[test]
     fn withdraw_inx_uninitialized_acc_two_withdraws_ok() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             with_test_keyed_account(42, false, |to_keyed| {
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
                 let invoke_context = create_invoke_context_with_blockhash(0);
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports() / 2;
-                let nonce_expect_lamports =
-                    nonce_keyed.account.borrow().lamports() - withdraw_lamports;
-                let to_expect_lamports = to_keyed.account.borrow().lamports() + withdraw_lamports;
+                let withdraw_carats = nonce_keyed.account.borrow().carats() / 2;
+                let nonce_expect_carats =
+                    nonce_keyed.account.borrow().carats() - withdraw_carats;
+                let to_expect_carats = to_keyed.account.borrow().carats() + withdraw_carats;
                 nonce_keyed
                     .withdraw_nonce_account(
-                        withdraw_lamports,
+                        withdraw_carats,
                         to_keyed,
                         &rent,
                         &signers,
@@ -642,17 +642,17 @@ mod test {
                     .convert_to_current();
                 assert_eq!(state, State::Uninitialized);
                 assert_eq!(
-                    nonce_keyed.account.borrow().lamports(),
-                    nonce_expect_lamports
+                    nonce_keyed.account.borrow().carats(),
+                    nonce_expect_carats
                 );
-                assert_eq!(to_keyed.account.borrow().lamports(), to_expect_lamports);
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports();
-                let nonce_expect_lamports =
-                    nonce_keyed.account.borrow().lamports() - withdraw_lamports;
-                let to_expect_lamports = to_keyed.account.borrow().lamports() + withdraw_lamports;
+                assert_eq!(to_keyed.account.borrow().carats(), to_expect_carats);
+                let withdraw_carats = nonce_keyed.account.borrow().carats();
+                let nonce_expect_carats =
+                    nonce_keyed.account.borrow().carats() - withdraw_carats;
+                let to_expect_carats = to_keyed.account.borrow().carats() + withdraw_carats;
                 nonce_keyed
                     .withdraw_nonce_account(
-                        withdraw_lamports,
+                        withdraw_carats,
                         to_keyed,
                         &rent,
                         &signers,
@@ -664,10 +664,10 @@ mod test {
                     .convert_to_current();
                 assert_eq!(state, State::Uninitialized);
                 assert_eq!(
-                    nonce_keyed.account.borrow().lamports(),
-                    nonce_expect_lamports
+                    nonce_keyed.account.borrow().carats(),
+                    nonce_expect_carats
                 );
-                assert_eq!(to_keyed.account.borrow().lamports(), to_expect_lamports);
+                assert_eq!(to_keyed.account.borrow().carats(), to_expect_carats);
             })
         })
     }
@@ -675,11 +675,11 @@ mod test {
     #[test]
     fn withdraw_inx_initialized_acc_two_withdraws_ok() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let mut signers = HashSet::new();
             signers.insert(*nonce_keyed.signer_key().unwrap());
             let invoke_context = create_invoke_context_with_blockhash(31);
@@ -697,13 +697,13 @@ mod test {
             };
             assert_eq!(state, State::Initialized(data.clone()));
             with_test_keyed_account(42, false, |to_keyed| {
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports() - min_lamports;
-                let nonce_expect_lamports =
-                    nonce_keyed.account.borrow().lamports() - withdraw_lamports;
-                let to_expect_lamports = to_keyed.account.borrow().lamports() + withdraw_lamports;
+                let withdraw_carats = nonce_keyed.account.borrow().carats() - min_carats;
+                let nonce_expect_carats =
+                    nonce_keyed.account.borrow().carats() - withdraw_carats;
+                let to_expect_carats = to_keyed.account.borrow().carats() + withdraw_carats;
                 nonce_keyed
                     .withdraw_nonce_account(
-                        withdraw_lamports,
+                        withdraw_carats,
                         to_keyed,
                         &rent,
                         &signers,
@@ -720,18 +720,18 @@ mod test {
                 };
                 assert_eq!(state, State::Initialized(data));
                 assert_eq!(
-                    nonce_keyed.account.borrow().lamports(),
-                    nonce_expect_lamports
+                    nonce_keyed.account.borrow().carats(),
+                    nonce_expect_carats
                 );
-                assert_eq!(to_keyed.account.borrow().lamports(), to_expect_lamports);
+                assert_eq!(to_keyed.account.borrow().carats(), to_expect_carats);
                 let invoke_context = create_invoke_context_with_blockhash(0);
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports();
-                let nonce_expect_lamports =
-                    nonce_keyed.account.borrow().lamports() - withdraw_lamports;
-                let to_expect_lamports = to_keyed.account.borrow().lamports() + withdraw_lamports;
+                let withdraw_carats = nonce_keyed.account.borrow().carats();
+                let nonce_expect_carats =
+                    nonce_keyed.account.borrow().carats() - withdraw_carats;
+                let to_expect_carats = to_keyed.account.borrow().carats() + withdraw_carats;
                 nonce_keyed
                     .withdraw_nonce_account(
-                        withdraw_lamports,
+                        withdraw_carats,
                         to_keyed,
                         &rent,
                         &signers,
@@ -743,10 +743,10 @@ mod test {
                     .convert_to_current();
                 assert_eq!(state, State::Uninitialized);
                 assert_eq!(
-                    nonce_keyed.account.borrow().lamports(),
-                    nonce_expect_lamports
+                    nonce_keyed.account.borrow().carats(),
+                    nonce_expect_carats
                 );
-                assert_eq!(to_keyed.account.borrow().lamports(), to_expect_lamports);
+                assert_eq!(to_keyed.account.borrow().carats(), to_expect_carats);
             })
         })
     }
@@ -754,11 +754,11 @@ mod test {
     #[test]
     fn withdraw_inx_initialized_acc_nonce_too_early_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let invoke_context = create_invoke_context_with_blockhash(0);
             let authorized = *nonce_keyed.unsigned_key();
             nonce_keyed
@@ -767,9 +767,9 @@ mod test {
             with_test_keyed_account(42, false, |to_keyed| {
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports();
+                let withdraw_carats = nonce_keyed.account.borrow().carats();
                 let result = nonce_keyed.withdraw_nonce_account(
-                    withdraw_lamports,
+                    withdraw_carats,
                     to_keyed,
                     &rent,
                     &signers,
@@ -783,11 +783,11 @@ mod test {
     #[test]
     fn withdraw_inx_initialized_acc_insuff_funds_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let invoke_context = create_invoke_context_with_blockhash(95);
             let authorized = *nonce_keyed.unsigned_key();
             nonce_keyed
@@ -797,9 +797,9 @@ mod test {
                 let invoke_context = create_invoke_context_with_blockhash(63);
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports() + 1;
+                let withdraw_carats = nonce_keyed.account.borrow().carats() + 1;
                 let result = nonce_keyed.withdraw_nonce_account(
-                    withdraw_lamports,
+                    withdraw_carats,
                     to_keyed,
                     &rent,
                     &signers,
@@ -813,11 +813,11 @@ mod test {
     #[test]
     fn withdraw_inx_initialized_acc_insuff_rent_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let invoke_context = create_invoke_context_with_blockhash(95);
             let authorized = *nonce_keyed.unsigned_key();
             nonce_keyed
@@ -827,9 +827,9 @@ mod test {
                 let invoke_context = create_invoke_context_with_blockhash(63);
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
-                let withdraw_lamports = nonce_keyed.account.borrow().lamports() - min_lamports + 1;
+                let withdraw_carats = nonce_keyed.account.borrow().carats() - min_carats + 1;
                 let result = nonce_keyed.withdraw_nonce_account(
-                    withdraw_lamports,
+                    withdraw_carats,
                     to_keyed,
                     &rent,
                     &signers,
@@ -843,11 +843,11 @@ mod test {
     #[test]
     fn withdraw_inx_overflow() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_keyed| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_keyed| {
             let invoke_context = create_invoke_context_with_blockhash(95);
             let authorized = *nonce_keyed.unsigned_key();
             nonce_keyed
@@ -857,9 +857,9 @@ mod test {
                 let invoke_context = create_invoke_context_with_blockhash(63);
                 let mut signers = HashSet::new();
                 signers.insert(*nonce_keyed.signer_key().unwrap());
-                let withdraw_lamports = u64::MAX - 54;
+                let withdraw_carats = u64::MAX - 54;
                 let result = nonce_keyed.withdraw_nonce_account(
-                    withdraw_lamports,
+                    withdraw_carats,
                     to_keyed,
                     &rent,
                     &signers,
@@ -873,11 +873,11 @@ mod test {
     #[test]
     fn initialize_inx_ok() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |keyed_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |keyed_account| {
             let state = AccountUtilsState::<Versions>::state(keyed_account)
                 .unwrap()
                 .convert_to_current();
@@ -903,11 +903,11 @@ mod test {
     #[test]
     fn initialize_inx_initialized_account_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |keyed_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |keyed_account| {
             let invoke_context = create_invoke_context_with_blockhash(31);
             let authorized = *keyed_account.unsigned_key();
             keyed_account
@@ -923,11 +923,11 @@ mod test {
     #[test]
     fn initialize_inx_uninitialized_acc_insuff_funds_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports - 42, true, |keyed_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats - 42, true, |keyed_account| {
             let invoke_context = create_invoke_context_with_blockhash(63);
             let authorized = *keyed_account.unsigned_key();
             let result =
@@ -939,11 +939,11 @@ mod test {
     #[test]
     fn authorize_inx_ok() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_account| {
             let mut signers = HashSet::new();
             signers.insert(*nonce_account.signer_key().unwrap());
             let invoke_context = create_invoke_context_with_blockhash(31);
@@ -973,11 +973,11 @@ mod test {
     #[test]
     fn authorize_inx_uninitialized_state_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_account| {
             let mut signers = HashSet::new();
             let invoke_context = MockInvokeContext::new(vec![]);
             signers.insert(*nonce_account.signer_key().unwrap());
@@ -993,11 +993,11 @@ mod test {
     #[test]
     fn authorize_inx_bad_authority_fail() {
         let rent = Rent {
-            lamports_per_byte_year: 42,
+            carats_per_byte_year: 42,
             ..Rent::default()
         };
-        let min_lamports = rent.minimum_balance(State::size());
-        with_test_keyed_account(min_lamports + 42, true, |nonce_account| {
+        let min_carats = rent.minimum_balance(State::size());
+        with_test_keyed_account(min_carats + 42, true, |nonce_account| {
             let mut signers = HashSet::new();
             signers.insert(*nonce_account.signer_key().unwrap());
             let invoke_context = create_invoke_context_with_blockhash(31);

@@ -4,7 +4,7 @@ use {
     console::style,
     indicatif::{ProgressBar, ProgressStyle},
     solana_sdk::{
-        clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_gema,
+        clock::UnixTimestamp, hash::Hash, message::Message, native_token::carats_to_gema,
         program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     solana_transaction_status::UiTransactionStatusMeta,
@@ -15,7 +15,7 @@ use {
 
 #[derive(Clone, Debug)]
 pub struct BuildBalanceMessageConfig {
-    pub use_lamports_unit: bool,
+    pub use_carats_unit: bool,
     pub show_unit: bool,
     pub trim_trailing_zeros: bool,
 }
@@ -23,7 +23,7 @@ pub struct BuildBalanceMessageConfig {
 impl Default for BuildBalanceMessageConfig {
     fn default() -> Self {
         Self {
-            use_lamports_unit: false,
+            use_carats_unit: false,
             show_unit: true,
             trim_trailing_zeros: true,
         }
@@ -36,13 +36,13 @@ fn is_memo_program(k: &Pubkey) -> bool {
 }
 
 pub fn build_balance_message_with_config(
-    lamports: u64,
+    carats: u64,
     config: &BuildBalanceMessageConfig,
 ) -> String {
-    let value = if config.use_lamports_unit {
-        lamports.to_string()
+    let value = if config.use_carats_unit {
+        carats.to_string()
     } else {
-        let sol = lamports_to_gema(lamports);
+        let sol = carats_to_gema(carats);
         let sol_str = format!("{:.9}", sol);
         if config.trim_trailing_zeros {
             sol_str
@@ -54,8 +54,8 @@ pub fn build_balance_message_with_config(
         }
     };
     let unit = if config.show_unit {
-        if config.use_lamports_unit {
-            let ess = if lamports == 1 { "" } else { "s" };
+        if config.use_carats_unit {
+            let ess = if carats == 1 { "" } else { "s" };
             format!(" lamport{}", ess)
         } else {
             " GEMA".to_string()
@@ -66,11 +66,11 @@ pub fn build_balance_message_with_config(
     format!("{}{}", value, unit)
 }
 
-pub fn build_balance_message(lamports: u64, use_lamports_unit: bool, show_unit: bool) -> String {
+pub fn build_balance_message(carats: u64, use_carats_unit: bool, show_unit: bool) -> String {
     build_balance_message_with_config(
-        lamports,
+        carats,
         &BuildBalanceMessageConfig {
-            use_lamports_unit,
+            use_carats_unit,
             show_unit,
             ..BuildBalanceMessageConfig::default()
         },
@@ -285,7 +285,7 @@ pub fn write_transaction<W: io::Write>(
             w,
             "{}  Fee: ◎{}",
             prefix,
-            lamports_to_gema(transaction_status.fee)
+            carats_to_gema(transaction_status.fee)
         )?;
         assert_eq!(
             transaction_status.pre_balances.len(),
@@ -303,7 +303,7 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{}",
                     prefix,
                     i,
-                    lamports_to_gema(*pre)
+                    carats_to_gema(*pre)
                 )?;
             } else {
                 writeln!(
@@ -311,8 +311,8 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{} -> ◎{}",
                     prefix,
                     i,
-                    lamports_to_gema(*pre),
-                    lamports_to_gema(*post)
+                    carats_to_gema(*pre),
+                    carats_to_gema(*post)
                 )?;
             }
         }
@@ -335,7 +335,7 @@ pub fn write_transaction<W: io::Write>(
                     prefix, "Address", "Type", "Amount", "New Balance"
                 )?;
                 for reward in rewards {
-                    let sign = if reward.lamports < 0 { "-" } else { "" };
+                    let sign = if reward.carats < 0 { "-" } else { "" };
                     writeln!(
                         w,
                         "{}  {:<44}  {:^15}  {:<15}  {}",
@@ -349,9 +349,9 @@ pub fn write_transaction<W: io::Write>(
                         format!(
                             "{}◎{:<14.9}",
                             sign,
-                            lamports_to_gema(reward.lamports.abs() as u64)
+                            carats_to_gema(reward.carats.abs() as u64)
                         ),
-                        format!("◎{:<18.9}", lamports_to_gema(reward.post_balance),)
+                        format!("◎{:<18.9}", carats_to_gema(reward.post_balance),)
                     )?;
                 }
             }

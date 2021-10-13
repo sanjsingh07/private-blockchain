@@ -116,7 +116,7 @@ fn generate_chunked_transfers(
     // generate and send transactions for the specified duration
     let start = Instant::now();
     let keypair_chunks = source_keypair_chunks.len();
-    let mut reclaim_lamports_back_to_source_account = false;
+    let mut reclaim_carats_back_to_source_account = false;
     let mut chunk_index = 0;
     while start.elapsed() < duration {
         generate_txs(
@@ -125,7 +125,7 @@ fn generate_chunked_transfers(
             &source_keypair_chunks[chunk_index],
             &dest_keypair_chunks[chunk_index],
             threads,
-            reclaim_lamports_back_to_source_account,
+            reclaim_carats_back_to_source_account,
         );
 
         // In sustained mode, overlap the transfers with generation. This has higher average
@@ -152,7 +152,7 @@ fn generate_chunked_transfers(
 
         // Switch directions after transfering for each "chunk"
         if chunk_index == 0 {
-            reclaim_lamports_back_to_source_account = !reclaim_lamports_back_to_source_account;
+            reclaim_carats_back_to_source_account = !reclaim_carats_back_to_source_account;
         }
     }
 }
@@ -507,12 +507,12 @@ trait FundingTransactions<'a> {
         &mut self,
         client: &Arc<T>,
         to_fund: &[(&'a Keypair, Vec<(Pubkey, u64)>)],
-        to_lamports: u64,
+        to_carats: u64,
     );
     fn make(&mut self, to_fund: &[(&'a Keypair, Vec<(Pubkey, u64)>)]);
     fn sign(&mut self, blockhash: Hash);
     fn send<T: Client>(&self, client: &Arc<T>);
-    fn verify<T: 'static + Client + Send + Sync>(&mut self, client: &Arc<T>, to_lamports: u64);
+    fn verify<T: 'static + Client + Send + Sync>(&mut self, client: &Arc<T>, to_carats: u64);
 }
 
 impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
@@ -520,7 +520,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
         &mut self,
         client: &Arc<T>,
         to_fund: &[(&'a Keypair, Vec<(Pubkey, u64)>)],
-        to_lamports: u64,
+        to_carats: u64,
     ) {
         self.make(to_fund);
 
@@ -533,7 +533,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
                 } else {
                     " retrying"
                 },
-                to_lamports,
+                to_carats,
                 self.len() * MAX_SPENDS_PER_TX as usize,
                 self.len(),
             );
@@ -547,7 +547,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
             // Sleep a few slots to allow transactions to process
             sleep(Duration::from_secs(1));
 
-            self.verify(client, to_lamports);
+            self.verify(client, to_carats);
 
             // retry anything that seems to have dropped through cracks
             //  again since these txs are all or nothing, they're fine to
@@ -594,7 +594,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
         debug!("send {} txs: {}us", self.len(), send_txs.as_us());
     }
 
-    fn verify<T: 'static + Client + Send + Sync>(&mut self, client: &Arc<T>, to_lamports: u64) {
+    fn verify<T: 'static + Client + Send + Sync>(&mut self, client: &Arc<T>, to_carats: u64) {
         let starting_txs = self.len();
         let verified_txs = Arc::new(AtomicUsize::new(0));
         let too_many_failures = Arc::new(AtomicBool::new(false));
@@ -615,7 +615,7 @@ impl<'a> FundingTransactions<'a> for Vec<(&'a Keypair, Transaction)> {
                         return None;
                     }
 
-                    let verified = if verify_funding_transfer(&client, tx, to_lamports) {
+                    let verified = if verify_funding_transfer(&client, tx, to_carats) {
                         verified_txs.fetch_add(1, Ordering::Relaxed);
                         Some(k.pubkey())
                     } else {
@@ -675,7 +675,7 @@ pub fn fund_keys<T: 'static + Client + Send + Sync>(
     dests: &[Keypair],
     total: u64,
     max_fee: u64,
-    lamports_per_account: u64,
+    carats_per_account: u64,
 ) {
     let mut funded: Vec<&Keypair> = vec![source];
     let mut funded_funds = total;
@@ -684,11 +684,11 @@ pub fn fund_keys<T: 'static + Client + Send + Sync>(
         // Build to fund list and prepare funding sources for next iteration
         let mut new_funded: Vec<&Keypair> = vec![];
         let mut to_fund: Vec<(&Keypair, Vec<(Pubkey, u64)>)> = vec![];
-        let to_lamports = (funded_funds - lamports_per_account - max_fee) / MAX_SPENDS_PER_TX;
+        let to_carats = (funded_funds - carats_per_account - max_fee) / MAX_SPENDS_PER_TX;
         for f in funded {
             let start = not_funded.len() - MAX_SPENDS_PER_TX as usize;
             let dests: Vec<_> = not_funded.drain(start..).collect();
-            let spends: Vec<_> = dests.iter().map(|k| (k.pubkey(), to_lamports)).collect();
+            let spends: Vec<_> = dests.iter().map(|k| (k.pubkey(), to_carats)).collect();
             to_fund.push((f, spends));
             new_funded.extend(dests.into_iter());
         }
@@ -701,17 +701,17 @@ pub fn fund_keys<T: 'static + Client + Send + Sync>(
             Vec::<(&Keypair, Transaction)>::with_capacity(chunk.len()).fund(
                 &client,
                 chunk,
-                to_lamports,
+                to_carats,
             );
         });
 
         info!("funded: {} left: {}", new_funded.len(), not_funded.len());
         funded = new_funded;
-        funded_funds = to_lamports;
+        funded_funds = to_carats;
     }
 }
 
-pub fn airdrop_lamports<T: Client>(
+pub fn airdrop_carats<T: Client>(
     client: &T,
     faucet_addr: &SocketAddr,
     id: &Keypair,
@@ -724,7 +724,7 @@ pub fn airdrop_lamports<T: Client>(
     if starting_balance < desired_balance {
         let airdrop_amount = desired_balance - starting_balance;
         info!(
-            "Airdropping {:?} lamports from {} for {}",
+            "Airdropping {:?} carats from {} for {}",
             airdrop_amount,
             faucet_addr,
             id.pubkey(),
@@ -868,11 +868,11 @@ pub fn generate_and_fund_keypairs<T: 'static + Client + Send + Sync>(
     faucet_addr: Option<SocketAddr>,
     funding_key: &Keypair,
     keypair_count: usize,
-    lamports_per_account: u64,
+    carats_per_account: u64,
 ) -> Result<Vec<Keypair>> {
     info!("Creating {} keypairs...", keypair_count);
     let (mut keypairs, extra) = generate_keypairs(funding_key, keypair_count as u64);
-    info!("Get lamports...");
+    info!("Get carats...");
 
     // Sample the first keypair, to prevent lamport loss on repeated solana-bench-tps executions
     let first_key = keypairs[0].pubkey();
@@ -886,8 +886,8 @@ pub fn generate_and_fund_keypairs<T: 'static + Client + Send + Sync>(
     //   start another bench-tps run without re-funding all of the keypairs, check if the
     //   keypairs still have at least 80% of the expected funds. That should be enough to
     //   pay for the transaction fees in a new run.
-    let enough_lamports = 8 * lamports_per_account / 10;
-    if first_keypair_balance < enough_lamports || last_keypair_balance < enough_lamports {
+    let enough_carats = 8 * carats_per_account / 10;
+    if first_keypair_balance < enough_carats || last_keypair_balance < enough_carats {
         let single_sig_message = Message::new(
             &[Instruction::new_with_bytes(
                 Pubkey::new_unique(),
@@ -902,16 +902,16 @@ pub fn generate_and_fund_keypairs<T: 'static + Client + Send + Sync>(
             .unwrap();
         let extra_fees = extra * max_fee;
         let total_keypairs = keypairs.len() as u64 + 1; // Add one for funding keypair
-        let total = lamports_per_account * total_keypairs + extra_fees;
+        let total = carats_per_account * total_keypairs + extra_fees;
 
         let funding_key_balance = client.get_balance(&funding_key.pubkey()).unwrap_or(0);
         info!(
-            "Funding keypair balance: {} max_fee: {} lamports_per_account: {} extra: {} total: {}",
-            funding_key_balance, max_fee, lamports_per_account, extra, total
+            "Funding keypair balance: {} max_fee: {} carats_per_account: {} extra: {} total: {}",
+            funding_key_balance, max_fee, carats_per_account, extra, total
         );
 
         if client.get_balance(&funding_key.pubkey()).unwrap_or(0) < total {
-            airdrop_lamports(client.as_ref(), &faucet_addr.unwrap(), funding_key, total)?;
+            airdrop_carats(client.as_ref(), &faucet_addr.unwrap(), funding_key, total)?;
         }
 
         fund_keys(
@@ -920,7 +920,7 @@ pub fn generate_and_fund_keypairs<T: 'static + Client + Send + Sync>(
             &keypairs,
             total,
             max_fee,
-            lamports_per_account,
+            carats_per_account,
         );
     }
 
@@ -966,17 +966,17 @@ mod tests {
         let bank = Bank::new_for_tests(&genesis_config);
         let client = Arc::new(BankClient::new(bank));
         let keypair_count = 20;
-        let lamports = 20;
+        let carats = 20;
 
         let keypairs =
-            generate_and_fund_keypairs(client.clone(), None, &id, keypair_count, lamports).unwrap();
+            generate_and_fund_keypairs(client.clone(), None, &id, keypair_count, carats).unwrap();
 
         for kp in &keypairs {
             assert_eq!(
                 client
                     .get_balance_with_commitment(&kp.pubkey(), CommitmentConfig::processed())
                     .unwrap(),
-                lamports
+                carats
             );
         }
     }
@@ -989,13 +989,13 @@ mod tests {
         let bank = Bank::new_for_tests(&genesis_config);
         let client = Arc::new(BankClient::new(bank));
         let keypair_count = 20;
-        let lamports = 20;
+        let carats = 20;
 
         let keypairs =
-            generate_and_fund_keypairs(client.clone(), None, &id, keypair_count, lamports).unwrap();
+            generate_and_fund_keypairs(client.clone(), None, &id, keypair_count, carats).unwrap();
 
         for kp in &keypairs {
-            assert_eq!(client.get_balance(&kp.pubkey()).unwrap(), lamports);
+            assert_eq!(client.get_balance(&kp.pubkey()).unwrap(), carats);
         }
     }
 }

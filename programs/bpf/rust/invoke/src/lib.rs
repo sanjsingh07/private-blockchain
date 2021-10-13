@@ -49,10 +49,10 @@ const FROM_INDEX: usize = 10;
 fn do_nested_invokes(num_nested_invokes: u64, accounts: &[AccountInfo]) -> ProgramResult {
     assert!(accounts[ARGUMENT_INDEX].is_signer);
 
-    let pre_argument_lamports = accounts[ARGUMENT_INDEX].lamports();
-    let pre_invoke_argument_lamports = accounts[INVOKED_ARGUMENT_INDEX].lamports();
-    **accounts[ARGUMENT_INDEX].lamports.borrow_mut() -= 5;
-    **accounts[INVOKED_ARGUMENT_INDEX].lamports.borrow_mut() += 5;
+    let pre_argument_carats = accounts[ARGUMENT_INDEX].carats();
+    let pre_invoke_argument_carats = accounts[INVOKED_ARGUMENT_INDEX].carats();
+    **accounts[ARGUMENT_INDEX].carats.borrow_mut() -= 5;
+    **accounts[INVOKED_ARGUMENT_INDEX].carats.borrow_mut() += 5;
 
     msg!("First invoke");
     let instruction = create_instruction(
@@ -69,12 +69,12 @@ fn do_nested_invokes(num_nested_invokes: u64, accounts: &[AccountInfo]) -> Progr
     invoke(&instruction, accounts)?;
 
     assert_eq!(
-        accounts[ARGUMENT_INDEX].lamports(),
-        pre_argument_lamports - 5 + (2 * num_nested_invokes)
+        accounts[ARGUMENT_INDEX].carats(),
+        pre_argument_carats - 5 + (2 * num_nested_invokes)
     );
     assert_eq!(
-        accounts[INVOKED_ARGUMENT_INDEX].lamports(),
-        pre_invoke_argument_lamports + 5 - (2 * num_nested_invokes)
+        accounts[INVOKED_ARGUMENT_INDEX].carats(),
+        pre_invoke_argument_carats + 5 - (2 * num_nested_invokes)
     );
     Ok(())
 }
@@ -95,8 +95,8 @@ fn process_instruction(
         TEST_SUCCESS => {
             msg!("Call system program create account");
             {
-                let from_lamports = accounts[FROM_INDEX].lamports();
-                let to_lamports = accounts[DERIVED_KEY1_INDEX].lamports();
+                let from_carats = accounts[FROM_INDEX].carats();
+                let to_carats = accounts[DERIVED_KEY1_INDEX].carats();
                 assert_eq!(accounts[DERIVED_KEY1_INDEX].data_len(), 0);
                 assert!(solana_program::system_program::check_id(
                     accounts[DERIVED_KEY1_INDEX].owner
@@ -115,8 +115,8 @@ fn process_instruction(
                     &[&[b"You pass butter", &[bump_seed1]]],
                 )?;
 
-                assert_eq!(accounts[FROM_INDEX].lamports(), from_lamports - 42);
-                assert_eq!(accounts[DERIVED_KEY1_INDEX].lamports(), to_lamports + 42);
+                assert_eq!(accounts[FROM_INDEX].carats(), from_carats - 42);
+                assert_eq!(accounts[DERIVED_KEY1_INDEX].carats(), to_carats + 42);
                 assert_eq!(program_id, accounts[DERIVED_KEY1_INDEX].owner);
                 assert_eq!(
                     accounts[DERIVED_KEY1_INDEX].data_len(),
@@ -133,16 +133,16 @@ fn process_instruction(
 
             msg!("Call system program transfer");
             {
-                let from_lamports = accounts[FROM_INDEX].lamports();
-                let to_lamports = accounts[DERIVED_KEY1_INDEX].lamports();
+                let from_carats = accounts[FROM_INDEX].carats();
+                let to_carats = accounts[DERIVED_KEY1_INDEX].carats();
                 let instruction = system_instruction::transfer(
                     accounts[FROM_INDEX].key,
                     accounts[DERIVED_KEY1_INDEX].key,
                     1,
                 );
                 invoke(&instruction, accounts)?;
-                assert_eq!(accounts[FROM_INDEX].lamports(), from_lamports - 1);
-                assert_eq!(accounts[DERIVED_KEY1_INDEX].lamports(), to_lamports + 1);
+                assert_eq!(accounts[FROM_INDEX].carats(), from_carats - 1);
+                assert_eq!(accounts[DERIVED_KEY1_INDEX].carats(), to_carats + 1);
             }
 
             msg!("Test data translation");
@@ -195,8 +195,8 @@ fn process_instruction(
                 invoke(&instruction, accounts)?;
 
                 {
-                    // writable but lamports borrow_mut'd
-                    let _ref_mut = accounts[writable].try_borrow_mut_lamports()?;
+                    // writable but carats borrow_mut'd
+                    let _ref_mut = accounts[writable].try_borrow_mut_carats()?;
                     assert_eq!(
                         invoke(&instruction, accounts),
                         Err(ProgramError::AccountBorrowFailed)
@@ -211,8 +211,8 @@ fn process_instruction(
                     );
                 }
                 {
-                    // writable but lamports borrow'd
-                    let _ref_mut = accounts[writable].try_borrow_lamports()?;
+                    // writable but carats borrow'd
+                    let _ref_mut = accounts[writable].try_borrow_carats()?;
                     assert_eq!(
                         invoke(&instruction, accounts),
                         Err(ProgramError::AccountBorrowFailed)
@@ -227,8 +227,8 @@ fn process_instruction(
                     );
                 }
                 {
-                    // readable but lamports borrow_mut'd
-                    let _ref_mut = accounts[readable].try_borrow_mut_lamports()?;
+                    // readable but carats borrow_mut'd
+                    let _ref_mut = accounts[readable].try_borrow_mut_carats()?;
                     assert_eq!(
                         invoke(&instruction, accounts),
                         Err(ProgramError::AccountBorrowFailed)
@@ -243,8 +243,8 @@ fn process_instruction(
                     );
                 }
                 {
-                    // readable but lamports borrow'd
-                    let _ref_mut = accounts[readable].try_borrow_lamports()?;
+                    // readable but carats borrow'd
+                    let _ref_mut = accounts[readable].try_borrow_carats()?;
                     invoke(&instruction, accounts)?;
                 }
                 {
@@ -371,8 +371,8 @@ fn process_instruction(
 
             msg!("Create account and init data");
             {
-                let from_lamports = accounts[FROM_INDEX].lamports();
-                let to_lamports = accounts[DERIVED_KEY2_INDEX].lamports();
+                let from_carats = accounts[FROM_INDEX].carats();
+                let to_carats = accounts[DERIVED_KEY2_INDEX].carats();
 
                 let instruction = create_instruction(
                     *accounts[INVOKED_PROGRAM_INDEX].key,
@@ -385,8 +385,8 @@ fn process_instruction(
                 );
                 invoke(&instruction, accounts)?;
 
-                assert_eq!(accounts[FROM_INDEX].lamports(), from_lamports - 1);
-                assert_eq!(accounts[DERIVED_KEY2_INDEX].lamports(), to_lamports + 1);
+                assert_eq!(accounts[FROM_INDEX].carats(), from_carats - 1);
+                assert_eq!(accounts[DERIVED_KEY2_INDEX].carats(), to_carats + 1);
                 let data = accounts[DERIVED_KEY2_INDEX].try_borrow_mut_data()?;
                 assert_eq!(data[0], 0x0e);
                 assert_eq!(data[MAX_PERMITTED_DATA_INCREASE - 1], 0x0f);
@@ -507,12 +507,12 @@ fn process_instruction(
             let ptr = accounts[FROM_INDEX].data.borrow().as_ptr() as u64 as *mut _;
             let len = accounts[FROM_INDEX].data_len();
             let mut data = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
-            let mut lamports = accounts[FROM_INDEX].lamports();
+            let mut carats = accounts[FROM_INDEX].carats();
             let from_info = AccountInfo::new(
                 &pubkey,
                 false,
                 true,
-                &mut lamports,
+                &mut carats,
                 &mut data,
                 &owner,
                 false,
@@ -523,12 +523,12 @@ fn process_instruction(
             let owner = *accounts[DERIVED_KEY1_INDEX].owner;
             // Point to top edge of heap, attempt to allocate into unprivileged memory
             let mut data = unsafe { std::slice::from_raw_parts_mut(0x300007ff8 as *mut _, 0) };
-            let mut lamports = accounts[DERIVED_KEY1_INDEX].lamports();
+            let mut carats = accounts[DERIVED_KEY1_INDEX].carats();
             let derived_info = AccountInfo::new(
                 &pubkey,
                 false,
                 true,
-                &mut lamports,
+                &mut carats,
                 &mut data,
                 &owner,
                 false,
@@ -540,12 +540,12 @@ fn process_instruction(
             let ptr = accounts[SYSTEM_PROGRAM_INDEX].data.borrow().as_ptr() as u64 as *mut _;
             let len = accounts[SYSTEM_PROGRAM_INDEX].data_len();
             let mut data = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
-            let mut lamports = accounts[SYSTEM_PROGRAM_INDEX].lamports();
+            let mut carats = accounts[SYSTEM_PROGRAM_INDEX].carats();
             let system_info = AccountInfo::new(
                 &pubkey,
                 false,
                 false,
-                &mut lamports,
+                &mut carats,
                 &mut data,
                 &owner,
                 true,
@@ -641,14 +641,14 @@ fn process_instruction(
             let _ = do_nested_invokes(5, accounts);
         }
         TEST_EXECUTABLE_LAMPORTS => {
-            msg!("Test executable lamports");
+            msg!("Test executable carats");
             let mut accounts = accounts.to_vec();
 
-            // set account to executable and subtract lamports
+            // set account to executable and subtract carats
             accounts[ARGUMENT_INDEX].executable = true;
-            **(*accounts[ARGUMENT_INDEX].lamports).borrow_mut() -= 1;
-            // add lamports to dest account
-            **(*accounts[DERIVED_KEY1_INDEX].lamports).borrow_mut() += 1;
+            **(*accounts[ARGUMENT_INDEX].carats).borrow_mut() -= 1;
+            // add carats to dest account
+            **(*accounts[DERIVED_KEY1_INDEX].carats).borrow_mut() += 1;
 
             let instruction = create_instruction(
                 *program_id,
@@ -661,11 +661,11 @@ fn process_instruction(
             let _ = invoke(&instruction, &accounts);
 
             // reset executable account
-            **(*accounts[ARGUMENT_INDEX].lamports).borrow_mut() += 1;
+            **(*accounts[ARGUMENT_INDEX].carats).borrow_mut() += 1;
         }
         ADD_LAMPORTS => {
             // make sure the total balance is fine
-            **accounts[0].lamports.borrow_mut() += 1;
+            **accounts[0].carats.borrow_mut() += 1;
         }
         _ => panic!(),
     }

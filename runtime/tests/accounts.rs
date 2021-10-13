@@ -48,10 +48,10 @@ fn test_shrink_and_clean() {
                 ));
             }
 
-            alive_accounts.retain(|(_pubkey, account)| account.lamports() >= 1);
+            alive_accounts.retain(|(_pubkey, account)| account.carats() >= 1);
 
             for (pubkey, account) in alive_accounts.iter_mut() {
-                account.checked_sub_lamports(1).unwrap();
+                account.checked_sub_carats(1).unwrap();
                 accounts.store_uncached(current_slot, &[(pubkey, account)]);
             }
             accounts.add_root(current_slot);
@@ -83,9 +83,9 @@ fn test_bad_bank_hash() {
         .into_par_iter()
         .map(|_| {
             let key = Keypair::new().pubkey();
-            let lamports = thread_rng().gen_range(0, 100);
+            let carats = thread_rng().gen_range(0, 100);
             let some_data_len = thread_rng().gen_range(0, 1000);
-            let account = AccountSharedData::new(lamports, some_data_len, &key);
+            let account = AccountSharedData::new(carats, some_data_len, &key);
             (key, account)
         })
         .collect();
@@ -110,7 +110,7 @@ fn test_bad_bank_hash() {
             }
             accounts_keys[idx]
                 .1
-                .set_lamports(thread_rng().gen_range(0, 1000));
+                .set_carats(thread_rng().gen_range(0, 1000));
         });
 
         let account_refs: Vec<_> = existing

@@ -46,7 +46,7 @@ extern uint64_t entrypoint(const uint8_t *input) {
     }
     sol_assert(params.ka_num == 4);
 
-    sol_assert(*accounts[ARGUMENT_INDEX].lamports == 42);
+    sol_assert(*accounts[ARGUMENT_INDEX].carats == 42);
     sol_assert(accounts[ARGUMENT_INDEX].data_len == 100);
     sol_assert(accounts[ARGUMENT_INDEX].is_signer);
     sol_assert(accounts[ARGUMENT_INDEX].is_writable);
@@ -58,7 +58,7 @@ extern uint64_t entrypoint(const uint8_t *input) {
 
     sol_assert(SolPubkey_same(accounts[INVOKED_ARGUMENT_INDEX].owner,
                               accounts[INVOKED_PROGRAM_INDEX].key));
-    sol_assert(*accounts[INVOKED_ARGUMENT_INDEX].lamports == 10);
+    sol_assert(*accounts[INVOKED_ARGUMENT_INDEX].carats == 10);
     sol_assert(accounts[INVOKED_ARGUMENT_INDEX].data_len == 10);
     sol_assert(accounts[INVOKED_ARGUMENT_INDEX].is_signer);
     sol_assert(accounts[INVOKED_ARGUMENT_INDEX].is_writable);
@@ -78,8 +78,8 @@ extern uint64_t entrypoint(const uint8_t *input) {
                               accounts[INVOKED_PROGRAM_DUP_INDEX].key));
     sol_assert(SolPubkey_same(accounts[INVOKED_PROGRAM_INDEX].owner,
                               accounts[INVOKED_PROGRAM_DUP_INDEX].owner));
-    sol_assert(*accounts[INVOKED_PROGRAM_INDEX].lamports ==
-               *accounts[INVOKED_PROGRAM_DUP_INDEX].lamports);
+    sol_assert(*accounts[INVOKED_PROGRAM_INDEX].carats ==
+               *accounts[INVOKED_PROGRAM_DUP_INDEX].carats);
     sol_assert(accounts[INVOKED_PROGRAM_INDEX].is_signer ==
                accounts[INVOKED_PROGRAM_DUP_INDEX].is_signer);
     sol_assert(accounts[INVOKED_PROGRAM_INDEX].is_writable ==
@@ -234,8 +234,8 @@ extern uint64_t entrypoint(const uint8_t *input) {
     sol_assert(accounts[INVOKED_ARGUMENT_INDEX].is_signer);
     sol_assert(accounts[ARGUMENT_INDEX].is_signer);
 
-    *accounts[INVOKED_ARGUMENT_INDEX].lamports -= 1;
-    *accounts[ARGUMENT_INDEX].lamports += 1;
+    *accounts[INVOKED_ARGUMENT_INDEX].carats -= 1;
+    *accounts[ARGUMENT_INDEX].carats += 1;
 
     uint8_t remaining_invokes = params.data[1];
     if (remaining_invokes > 1) {

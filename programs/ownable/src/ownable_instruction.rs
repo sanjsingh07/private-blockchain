@@ -28,14 +28,14 @@ pub fn create_account(
     payer_pubkey: &Pubkey,
     account_pubkey: &Pubkey,
     owner_pubkey: &Pubkey,
-    lamports: u64,
+    carats: u64,
 ) -> Vec<Instruction> {
     let space = std::mem::size_of::<Pubkey>() as u64;
     vec![
         system_instruction::create_account(
             payer_pubkey,
             account_pubkey,
-            lamports,
+            carats,
             space,
             &crate::id(),
         ),

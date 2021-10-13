@@ -80,7 +80,7 @@ impl From<Reward> for generated::Reward {
     fn from(reward: Reward) -> Self {
         Self {
             pubkey: reward.pubkey,
-            lamports: reward.lamports,
+            carats: reward.carats,
             post_balance: reward.post_balance,
             reward_type: match reward.reward_type {
                 None => generated::RewardType::Unspecified,
@@ -98,7 +98,7 @@ impl From<generated::Reward> for Reward {
     fn from(reward: generated::Reward) -> Self {
         Self {
             pubkey: reward.pubkey,
-            lamports: reward.lamports,
+            carats: reward.carats,
             post_balance: reward.post_balance,
             reward_type: match reward.reward_type {
                 0 => None,
@@ -852,7 +852,7 @@ mod test {
     fn test_reward_type_encode() {
         let mut reward = Reward {
             pubkey: "invalid".to_string(),
-            lamports: 123,
+            carats: 123,
             post_balance: 321,
             reward_type: None,
             commission: None,

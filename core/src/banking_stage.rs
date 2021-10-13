@@ -1905,7 +1905,7 @@ mod tests {
         } = create_slow_genesis_config(2);
         let (verified_sender, verified_receiver) = unbounded();
 
-        // Process a batch that includes a transaction that receives two lamports.
+        // Process a batch that includes a transaction that receives two carats.
         let alice = Keypair::new();
         let tx =
             system_transaction::transfer(&mint_keypair, &alice.pubkey(), 2, genesis_config.hash());
@@ -1989,7 +1989,7 @@ mod tests {
                     .for_each(|x| assert_eq!(*x, Ok(())));
             }
 
-            // Assert the user holds two lamports, not three. If the stage only outputs one
+            // Assert the user holds two carats, not three. If the stage only outputs one
             // entry, then the second transaction will be rejected, because it drives
             // the account balance below zero before the credit is added.
             assert_eq!(bank.get_balance(&alice.pubkey()), 2);
@@ -2238,8 +2238,8 @@ mod tests {
         );
     }
 
-    fn create_slow_genesis_config(lamports: u64) -> GenesisConfigInfo {
-        let mut config_info = create_genesis_config(lamports);
+    fn create_slow_genesis_config(carats: u64) -> GenesisConfigInfo {
+        let mut config_info = create_genesis_config(carats);
         // For these tests there's only 1 slot, don't want to run out of ticks
         config_info.genesis_config.ticks_per_slot *= 8;
         config_info

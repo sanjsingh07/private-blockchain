@@ -71,15 +71,15 @@ mod tests {
         transport::Result,
     };
 
-    fn create_bank(lamports: u64) -> (Bank, Keypair) {
-        let (genesis_config, mint_keypair) = create_genesis_config(lamports);
+    fn create_bank(carats: u64) -> (Bank, Keypair) {
+        let (genesis_config, mint_keypair) = create_genesis_config(carats);
         let mut bank = Bank::new_for_tests(&genesis_config);
         bank.add_builtin("ownable_program", crate::id(), process_instruction);
         (bank, mint_keypair)
     }
 
-    fn create_bank_client(lamports: u64) -> (BankClient, Keypair) {
-        let (bank, mint_keypair) = create_bank(lamports);
+    fn create_bank_client(carats: u64) -> (BankClient, Keypair) {
+        let (bank, mint_keypair) = create_bank(carats);
         (BankClient::new(bank), mint_keypair)
     }
 
@@ -88,13 +88,13 @@ mod tests {
         payer_keypair: &Keypair,
         account_keypair: &Keypair,
         owner_pubkey: &Pubkey,
-        lamports: u64,
+        carats: u64,
     ) -> Result<Signature> {
         let instructions = ownable_instruction::create_account(
             &payer_keypair.pubkey(),
             &account_keypair.pubkey(),
             owner_pubkey,
-            lamports,
+            carats,
         );
         let message = Message::new(&instructions, Some(&payer_keypair.pubkey()));
         bank_client.send_and_confirm_message(&[payer_keypair, account_keypair], message)

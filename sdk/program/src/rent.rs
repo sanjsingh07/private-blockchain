@@ -6,7 +6,7 @@ use crate::clock::DEFAULT_SLOTS_PER_EPOCH;
 #[derive(Serialize, Deserialize, PartialEq, Clone, Copy, Debug, AbiExample)]
 pub struct Rent {
     /// Rental rate
-    pub lamports_per_byte_year: u64,
+    pub carats_per_byte_year: u64,
 
     /// exemption threshold, in years
     pub exemption_threshold: f64,
@@ -15,8 +15,8 @@ pub struct Rent {
     pub burn_percent: u8,
 }
 
-/// default rental rate in lamports/byte-year, based on:
-///  10^9 lamports per GEMA
+/// default rental rate in carats/byte-year, based on:
+///  10^9 carats per GEMA
 ///  $1 per GEMA
 ///  $0.01 per megabyte day
 ///  $3.65 per megabyte year
@@ -34,7 +34,7 @@ pub const ACCOUNT_STORAGE_OVERHEAD: u64 = 128;
 impl Default for Rent {
     fn default() -> Self {
         Self {
-            lamports_per_byte_year: DEFAULT_LAMPORTS_PER_BYTE_YEAR,
+            carats_per_byte_year: DEFAULT_LAMPORTS_PER_BYTE_YEAR,
             exemption_threshold: DEFAULT_EXEMPTION_THRESHOLD,
             burn_percent: DEFAULT_BURN_PERCENT,
         }
@@ -54,7 +54,7 @@ impl Rent {
     /// eg. when making rent variable -- the stake program will need to be refactored
     pub fn minimum_balance(&self, data_len: usize) -> u64 {
         let bytes = data_len as u64;
-        (((ACCOUNT_STORAGE_OVERHEAD + bytes) * self.lamports_per_byte_year) as f64
+        (((ACCOUNT_STORAGE_OVERHEAD + bytes) * self.carats_per_byte_year) as f64
             * self.exemption_threshold) as u64
     }
 
@@ -69,7 +69,7 @@ impl Rent {
             (0, true)
         } else {
             (
-                ((self.lamports_per_byte_year * (data_len as u64 + ACCOUNT_STORAGE_OVERHEAD))
+                ((self.carats_per_byte_year * (data_len as u64 + ACCOUNT_STORAGE_OVERHEAD))
                     as f64
                     * years_elapsed) as u64,
                 false,
@@ -79,7 +79,7 @@ impl Rent {
 
     pub fn free() -> Self {
         Self {
-            lamports_per_byte_year: 0,
+            carats_per_byte_year: 0,
             ..Rent::default()
         }
     }
@@ -87,9 +87,9 @@ impl Rent {
     pub fn with_slots_per_epoch(slots_per_epoch: u64) -> Self {
         let ratio = slots_per_epoch as f64 / DEFAULT_SLOTS_PER_EPOCH as f64;
         let exemption_threshold = DEFAULT_EXEMPTION_THRESHOLD as f64 * ratio;
-        let lamports_per_byte_year = (DEFAULT_LAMPORTS_PER_BYTE_YEAR as f64 / ratio) as u64;
+        let carats_per_byte_year = (DEFAULT_LAMPORTS_PER_BYTE_YEAR as f64 / ratio) as u64;
         Self {
-            lamports_per_byte_year,
+            carats_per_byte_year,
             exemption_threshold,
             ..Self::default()
         }
@@ -123,7 +123,7 @@ mod tests {
         );
 
         let custom_rent = Rent {
-            lamports_per_byte_year: 5,
+            carats_per_byte_year: 5,
             exemption_threshold: 2.5,
             ..Rent::default()
         };
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(
             custom_rent.due(0, 2, 1.2),
             (
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year) as f64 * 1.2)
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.carats_per_byte_year) as f64 * 1.2)
                     as u64,
                 false
             )
@@ -139,7 +139,7 @@ mod tests {
 
         assert_eq!(
             custom_rent.due(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year) as f64
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.carats_per_byte_year) as f64
                     * custom_rent.exemption_threshold) as u64,
                 2,
                 1.2
@@ -162,9 +162,9 @@ mod tests {
             "\n\n\
              ==================================================\n\
              empty account, no data:\n\
-             \t{} lamports per epoch, {} lamports to be rent_exempt\n\n\
+             \t{} carats per epoch, {} carats to be rent_exempt\n\n\
              stake_history, which is {}kB of data:\n\
-             \t{} lamports per epoch, {} lamports to be rent_exempt\n\
+             \t{} carats per epoch, {} carats to be rent_exempt\n\
              ==================================================\n\n",
             rent.due(
                 0,

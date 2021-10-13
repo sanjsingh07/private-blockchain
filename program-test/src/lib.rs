@@ -31,7 +31,7 @@ use {
         instruction::Instruction,
         instruction::InstructionError,
         message::Message,
-        native_token::gema_to_lamports,
+        native_token::gema_to_carats,
         process_instruction::{stable_log, InvokeContext, ProcessInstructionWithContext},
         program_error::{ProgramError, ACCOUNT_BORROW_FAILED, UNSUPPORTED_SYSVAR},
         pubkey::Pubkey,
@@ -122,14 +122,14 @@ pub fn builtin_process_instruction(
         })
         .collect();
 
-    // Create shared references to each account's lamports/data/owner
+    // Create shared references to each account's carats/data/owner
     let account_refs: HashMap<_, _> = accounts
         .iter_mut()
         .map(|(key, account)| {
             (
                 *key,
                 (
-                    Rc::new(RefCell::new(&mut account.lamports)),
+                    Rc::new(RefCell::new(&mut account.carats)),
                     Rc::new(RefCell::new(&mut account.data[..])),
                     &account.owner,
                 ),
@@ -142,12 +142,12 @@ pub fn builtin_process_instruction(
         .iter()
         .map(|keyed_account| {
             let key = keyed_account.unsigned_key();
-            let (lamports, data, owner) = &account_refs[key];
+            let (carats, data, owner) = &account_refs[key];
             AccountInfo {
                 key,
                 is_signer: keyed_account.signer_key().is_some(),
                 is_writable: keyed_account.is_writable(),
-                lamports: lamports.clone(),
+                carats: carats.clone(),
                 data: data.clone(),
                 owner,
                 executable: keyed_account.executable().unwrap(),
@@ -168,8 +168,8 @@ pub fn builtin_process_instruction(
     for keyed_account in keyed_accounts {
         let mut account = keyed_account.account.borrow_mut();
         let key = keyed_account.unsigned_key();
-        let (lamports, data, _owner) = &account_refs[key];
-        account.set_lamports(**lamports.borrow());
+        let (carats, data, _owner) = &account_refs[key];
+        account.set_carats(**carats.borrow());
         account.set_data(data.borrow().to_vec());
     }
 
@@ -291,7 +291,7 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
                 let mut account = account.borrow_mut();
                 account.copy_into_owner_from_slice(account_info.owner.as_ref());
                 account.set_data_from_slice(&account_info.try_borrow_data().unwrap());
-                account.set_lamports(account_info.lamports());
+                account.set_carats(account_info.carats());
                 account.set_executable(account_info.executable);
                 account.set_rent_epoch(account_info.rent_epoch);
             }
@@ -343,7 +343,7 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
         // Copy writeable account modifications back into the caller's AccountInfos
         for (account, account_info) in accounts.iter() {
             if let Some(account_info) = account_info {
-                **account_info.try_borrow_mut_lamports().unwrap() = account.borrow().lamports();
+                **account_info.try_borrow_mut_carats().unwrap() = account.borrow().carats();
                 let mut data = account_info.try_borrow_mut_data()?;
                 let account_borrow = account.borrow();
                 let new_data = account_borrow.data();
@@ -453,11 +453,11 @@ fn setup_fee_calculator(bank: Bank) -> Bank {
     let last_blockhash = bank.last_blockhash();
     // Make sure the new last_blockhash now requires a fee
     #[allow(deprecated)]
-    let lamports_per_signature = bank
+    let carats_per_signature = bank
         .get_fee_calculator(&last_blockhash)
         .expect("fee_calculator")
-        .lamports_per_signature;
-    assert_ne!(lamports_per_signature, 0);
+        .carats_per_signature;
+    assert_ne!(carats_per_signature, 0);
 
     bank
 }
@@ -552,14 +552,14 @@ impl ProgramTest {
     pub fn add_account_with_file_data(
         &mut self,
         address: Pubkey,
-        lamports: u64,
+        carats: u64,
         owner: Pubkey,
         filename: &str,
     ) {
         self.add_account(
             address,
             Account {
-                lamports,
+                carats,
                 data: read_file(find_file(filename).unwrap_or_else(|| {
                     panic!("Unable to locate {}", filename);
                 })),
@@ -575,14 +575,14 @@ impl ProgramTest {
     pub fn add_account_with_base64_data(
         &mut self,
         address: Pubkey,
-        lamports: u64,
+        carats: u64,
         owner: Pubkey,
         data_base64: &str,
     ) {
         self.add_account(
             address,
             Account {
-                lamports,
+                carats,
                 data: base64::decode(data_base64)
                     .unwrap_or_else(|err| panic!("Failed to base64 decode: {}", err)),
                 owner,
@@ -632,7 +632,7 @@ impl ProgramTest {
             this.add_account(
                 program_id,
                 Account {
-                    lamports: Rent::default().minimum_balance(data.len()).min(1),
+                    carats: Rent::default().minimum_balance(data.len()).min(1),
                     data,
                     owner: solana_sdk::bpf_loader::id(),
                     executable: true,
@@ -747,19 +747,19 @@ impl ProgramTest {
         let rent = Rent::default();
         let fee_rate_governor = FeeRateGovernor::default();
         let bootstrap_validator_pubkey = Pubkey::new_unique();
-        let bootstrap_validator_stake_lamports =
-            rent.minimum_balance(VoteState::size_of()) + gema_to_lamports(1_000_000.0);
+        let bootstrap_validator_stake_carats =
+            rent.minimum_balance(VoteState::size_of()) + gema_to_carats(1_000_000.0);
 
         let mint_keypair = Keypair::new();
         let voting_keypair = Keypair::new();
 
         let genesis_config = create_genesis_config_with_leader_ex(
-            gema_to_lamports(1_000_000.0),
+            gema_to_carats(1_000_000.0),
             &mint_keypair.pubkey(),
             &bootstrap_validator_pubkey,
             &voting_keypair.pubkey(),
             &Pubkey::new_unique(),
-            bootstrap_validator_stake_lamports,
+            bootstrap_validator_stake_carats,
             42,
             fee_rate_governor,
             rent,

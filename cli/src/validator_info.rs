@@ -289,7 +289,7 @@ pub fn process_set_validator_info(
     // Check existence of validator-info account
     let balance = rpc_client.get_balance(&info_pubkey).unwrap_or(0);
 
-    let lamports =
+    let carats =
         rpc_client.get_minimum_balance_for_rent_exemption(ValidatorInfo::max_space() as usize)?;
 
     let signers = if balance == 0 {
@@ -305,7 +305,7 @@ pub fn process_set_validator_info(
         vec![config.signers[0]]
     };
 
-    let build_message = |lamports| {
+    let build_message = |carats| {
         let keys = vec![
             (validator_info::id(), false),
             (config.signers[0].pubkey(), true),
@@ -318,7 +318,7 @@ pub fn process_set_validator_info(
             let mut instructions = config_instruction::create_account::<ValidatorInfo>(
                 &config.signers[0].pubkey(),
                 &info_pubkey,
-                lamports,
+                carats,
                 keys.clone(),
             );
             instructions.extend_from_slice(&[config_instruction::store(
@@ -349,7 +349,7 @@ pub fn process_set_validator_info(
     let (message, _) = resolve_spend_tx_and_check_account_balance(
         rpc_client,
         false,
-        SpendAmount::Some(lamports),
+        SpendAmount::Some(carats),
         &latest_blockhash,
         &config.signers[0].pubkey(),
         build_message,

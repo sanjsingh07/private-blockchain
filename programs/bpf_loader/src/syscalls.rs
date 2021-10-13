@@ -1520,7 +1520,7 @@ impl<'a> SyscallObject<BpfError> for SyscallBlake3<'a> {
 // Cross-program invocation syscalls
 
 struct AccountReferences<'a> {
-    lamports: &'a mut u64,
+    carats: &'a mut u64,
     owner: &'a mut Pubkey,
     data: &'a mut [u8],
     vm_data_addr: u64,
@@ -1640,11 +1640,11 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
         let translate = |account_info: &AccountInfo, invoke_context: &mut dyn InvokeContext| {
             // Translate the account from user space
 
-            let lamports = {
-                // Double translate lamports out of RefCell
+            let carats = {
+                // Double translate carats out of RefCell
                 let ptr = translate_type::<u64>(
                     memory_mapping,
-                    account_info.lamports.as_ptr() as u64,
+                    account_info.carats.as_ptr() as u64,
                     self.loader_id,
                 )?;
                 translate_type_mut::<u64>(memory_mapping, *ptr, self.loader_id)?
@@ -1695,7 +1695,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedRust<'a> {
             };
 
             Ok(AccountReferences {
-                lamports,
+                carats,
                 owner,
                 data,
                 vm_data_addr,
@@ -1812,7 +1812,7 @@ struct SolAccountMeta {
 #[derive(Debug)]
 struct SolAccountInfo {
     key_addr: u64,
-    lamports_addr: u64,
+    carats_addr: u64,
     data_len: u64,
     data_addr: u64,
     owner_addr: u64,
@@ -1922,9 +1922,9 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
         let translate = |account_info: &SolAccountInfo, invoke_context: &mut dyn InvokeContext| {
             // Translate the account from user space
 
-            let lamports = translate_type_mut::<u64>(
+            let carats = translate_type_mut::<u64>(
                 memory_mapping,
-                account_info.lamports_addr,
+                account_info.carats_addr,
                 self.loader_id,
             )?;
             let owner = translate_type_mut::<Pubkey>(
@@ -1965,7 +1965,7 @@ impl<'a> SyscallInvokeSigned<'a> for SyscallInvokeSignedC<'a> {
             )?;
 
             Ok(AccountReferences {
-                lamports,
+                carats,
                 owner,
                 data,
                 vm_data_addr,
@@ -2091,7 +2091,7 @@ where
                     let mut account = account.borrow_mut();
                     account.copy_into_owner_from_slice(account_ref.owner.as_ref());
                     account.set_data_from_slice(account_ref.data);
-                    account.set_lamports(*account_ref.lamports);
+                    account.set_carats(*account_ref.carats);
                     account.set_executable(account_ref.executable);
                     account.set_rent_epoch(account_ref.rent_epoch);
                 }
@@ -2222,7 +2222,7 @@ fn call<'a>(
     for (account, account_ref) in accounts.iter_mut() {
         let account = account.borrow();
         if let Some(account_ref) = account_ref {
-            *account_ref.lamports = account.lamports();
+            *account_ref.carats = account.carats();
             *account_ref.owner = *account.owner();
             if account_ref.data.len() != account.data().len() {
                 if !account_ref.data.is_empty() {
@@ -3415,7 +3415,7 @@ mod tests {
 
             let src_fees = Fees {
                 fee_calculator: FeeCalculator {
-                    lamports_per_signature: 1,
+                    carats_per_signature: 1,
                 },
             };
             let mut invoke_context = MockInvokeContext::new(vec![]);
@@ -3457,7 +3457,7 @@ mod tests {
             .unwrap();
 
             let src_rent = Rent {
-                lamports_per_byte_year: 1,
+                carats_per_byte_year: 1,
                 exemption_threshold: 2.0,
                 burn_percent: 3,
             };

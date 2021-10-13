@@ -20,7 +20,7 @@ fn test_cli_request_airdrop() {
     bob_config.json_rpc_url = test_validator.rpc_url();
     bob_config.command = CliCommand::Airdrop {
         pubkey: None,
-        lamports: 50,
+        carats: 50,
     };
     let keypair = Keypair::new();
     bob_config.signers = vec![&keypair];

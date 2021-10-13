@@ -14,8 +14,8 @@ pub struct AccountInfo<'a> {
     pub is_signer: bool,
     /// Is the account writable?
     pub is_writable: bool,
-    /// The lamports in the account.  Modifiable by programs.
-    pub lamports: Rc<RefCell<&'a mut u64>>,
+    /// The carats in the account.  Modifiable by programs.
+    pub carats: Rc<RefCell<&'a mut u64>>,
     /// The data held in this account.  Modifiable by programs.
     pub data: Rc<RefCell<&'a mut [u8]>>,
     /// Program that owns this account
@@ -39,14 +39,14 @@ impl<'a> fmt::Debug for AccountInfo<'a> {
         };
         write!(
             f,
-            "AccountInfo {{ key: {} owner: {} is_signer: {} is_writable: {} executable: {} rent_epoch: {} lamports: {} data.len: {} {} }}",
+            "AccountInfo {{ key: {} owner: {} is_signer: {} is_writable: {} executable: {} rent_epoch: {} carats: {} data.len: {} {} }}",
             self.key,
             self.owner,
             self.is_signer,
             self.is_writable,
             self.executable,
             self.rent_epoch,
-            self.lamports(),
+            self.carats(),
             self.data_len(),
             data_str,
         )
@@ -66,12 +66,12 @@ impl<'a> AccountInfo<'a> {
         self.key
     }
 
-    pub fn lamports(&self) -> u64 {
-        **self.lamports.borrow()
+    pub fn carats(&self) -> u64 {
+        **self.carats.borrow()
     }
 
-    pub fn try_lamports(&self) -> Result<u64, ProgramError> {
-        Ok(**self.try_borrow_lamports()?)
+    pub fn try_carats(&self) -> Result<u64, ProgramError> {
+        Ok(**self.try_borrow_carats()?)
     }
 
     pub fn data_len(&self) -> usize {
@@ -90,14 +90,14 @@ impl<'a> AccountInfo<'a> {
         Ok(self.try_borrow_data()?.is_empty())
     }
 
-    pub fn try_borrow_lamports(&self) -> Result<Ref<&mut u64>, ProgramError> {
-        self.lamports
+    pub fn try_borrow_carats(&self) -> Result<Ref<&mut u64>, ProgramError> {
+        self.carats
             .try_borrow()
             .map_err(|_| ProgramError::AccountBorrowFailed)
     }
 
-    pub fn try_borrow_mut_lamports(&self) -> Result<RefMut<&'a mut u64>, ProgramError> {
-        self.lamports
+    pub fn try_borrow_mut_carats(&self) -> Result<RefMut<&'a mut u64>, ProgramError> {
+        self.carats
             .try_borrow_mut()
             .map_err(|_| ProgramError::AccountBorrowFailed)
     }
@@ -118,7 +118,7 @@ impl<'a> AccountInfo<'a> {
         key: &'a Pubkey,
         is_signer: bool,
         is_writable: bool,
-        lamports: &'a mut u64,
+        carats: &'a mut u64,
         data: &'a mut [u8],
         owner: &'a Pubkey,
         executable: bool,
@@ -128,7 +128,7 @@ impl<'a> AccountInfo<'a> {
             key,
             is_signer,
             is_writable,
-            lamports: Rc::new(RefCell::new(lamports)),
+            carats: Rc::new(RefCell::new(carats)),
             data: Rc::new(RefCell::new(data)),
             owner,
             executable,
@@ -168,9 +168,9 @@ pub trait Account {
 impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, &'a mut T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (key, account) = self;
-        let (lamports, data, owner, executable, rent_epoch) = account.get();
+        let (carats, data, owner, executable, rent_epoch) = account.get();
         AccountInfo::new(
-            key, false, false, lamports, data, owner, executable, rent_epoch,
+            key, false, false, carats, data, owner, executable, rent_epoch,
         )
     }
 }
@@ -180,9 +180,9 @@ impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, &'a mut T) {
 impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, bool, &'a mut T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (key, is_signer, account) = self;
-        let (lamports, data, owner, executable, rent_epoch) = account.get();
+        let (carats, data, owner, executable, rent_epoch) = account.get();
         AccountInfo::new(
-            key, is_signer, false, lamports, data, owner, executable, rent_epoch,
+            key, is_signer, false, carats, data, owner, executable, rent_epoch,
         )
     }
 }
@@ -191,9 +191,9 @@ impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, bool, &'a mut T) {
 impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (ref key, account) = self;
-        let (lamports, data, owner, executable, rent_epoch) = account.get();
+        let (carats, data, owner, executable, rent_epoch) = account.get();
         AccountInfo::new(
-            key, false, false, lamports, data, owner, executable, rent_epoch,
+            key, false, false, carats, data, owner, executable, rent_epoch,
         )
     }
 }

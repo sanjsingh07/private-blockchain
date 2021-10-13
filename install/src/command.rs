@@ -220,13 +220,13 @@ fn new_update_manifest(
     {
         let recent_blockhash = rpc_client.get_latest_blockhash()?;
 
-        let lamports = rpc_client
+        let carats = rpc_client
             .get_minimum_balance_for_rent_exemption(SignedUpdateManifest::max_space() as usize)?;
 
         let instructions = config_instruction::create_account::<SignedUpdateManifest>(
             &from_keypair.pubkey(),
             &update_manifest_keypair.pubkey(),
-            lamports,
+            carats,
             vec![], // additional keys
         );
         let message = Message::new(&instructions, Some(&from_keypair.pubkey()));

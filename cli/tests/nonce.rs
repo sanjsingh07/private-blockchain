@@ -159,7 +159,7 @@ fn full_battery_tests(
         nonce_authority: index,
         memo: None,
         destination_account_pubkey: payee_pubkey,
-        lamports: 100,
+        carats: 100,
     };
     process_command(&config_payer).unwrap();
     check_recent_balance(1000, &rpc_client, &config_payer.signers[0].pubkey());
@@ -169,7 +169,7 @@ fn full_battery_tests(
     // Show nonce account
     config_payer.command = CliCommand::ShowNonceAccount {
         nonce_account_pubkey: nonce_account,
-        use_lamports_unit: true,
+        use_carats_unit: true,
     };
     process_command(&config_payer).unwrap();
 
@@ -206,7 +206,7 @@ fn full_battery_tests(
         nonce_authority: 1,
         memo: None,
         destination_account_pubkey: payee_pubkey,
-        lamports: 100,
+        carats: 100,
     };
     process_command(&config_payer).unwrap();
     check_recent_balance(1000, &rpc_client, &config_payer.signers[0].pubkey());

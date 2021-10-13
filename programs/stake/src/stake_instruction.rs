@@ -129,9 +129,9 @@ pub fn process_instruction(
                 can_reverse_deactivation,
             )
         }
-        StakeInstruction::Split(lamports) => {
+        StakeInstruction::Split(carats) => {
             let split_stake = &keyed_account_at_index(keyed_accounts, 1)?;
-            me.split(lamports, split_stake, &signers)
+            me.split(carats, split_stake, &signers)
         }
         StakeInstruction::Merge => {
             let source_stake = &keyed_account_at_index(keyed_accounts, 1)?;
@@ -146,10 +146,10 @@ pub fn process_instruction(
                 can_merge_expired_lockups,
             )
         }
-        StakeInstruction::Withdraw(lamports) => {
+        StakeInstruction::Withdraw(carats) => {
             let to = &keyed_account_at_index(keyed_accounts, 1)?;
             me.withdraw(
-                lamports,
+                carats,
                 to,
                 &from_keyed_account::<Clock>(keyed_account_at_index(keyed_accounts, 2)?)?,
                 &from_keyed_account::<StakeHistory>(keyed_account_at_index(keyed_accounts, 3)?)?,

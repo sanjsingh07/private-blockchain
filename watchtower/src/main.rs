@@ -14,7 +14,7 @@ use {
     solana_notifier::Notifier,
     solana_sdk::{
         hash::Hash,
-        native_token::{gema_to_lamports, Gema},
+        native_token::{gema_to_carats, Gema},
         pubkey::Pubkey,
     },
     std::{
@@ -144,7 +144,7 @@ fn get_config() -> Config {
 
     let interval = Duration::from_secs(value_t_or_exit!(matches, "interval", u64));
     let unhealthy_threshold = value_t_or_exit!(matches, "unhealthy_threshold", usize);
-    let minimum_validator_identity_balance = gema_to_lamports(value_t_or_exit!(
+    let minimum_validator_identity_balance = gema_to_carats(value_t_or_exit!(
         matches,
         "minimum_validator_identity_balance",
         f64
@@ -245,9 +245,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 info!(
                     "Current stake: {:.2}% | Total stake: {}, current stake: {}, delinquent: {}",
                     current_stake_percent,
-                    // Sol(total_stake),
-                    // Sol(total_current_stake),
-                    // Sol(total_delinquent_stake)
                     Gema(total_stake),
                     Gema(total_current_stake),
                     Gema(total_delinquent_stake)

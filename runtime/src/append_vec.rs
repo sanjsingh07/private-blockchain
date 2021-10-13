@@ -53,8 +53,8 @@ pub struct StoredMeta {
 /// So the data layout must be stable and consistent across the entire cluster!
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
 pub struct AccountMeta {
-    /// lamports in the account
-    pub lamports: u64,
+    /// carats in the account
+    pub carats: u64,
     /// the program that owns this account. If executable, the program that loads this account.
     pub owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
@@ -66,7 +66,7 @@ pub struct AccountMeta {
 impl<'a, T: ReadableAccount> From<&'a T> for AccountMeta {
     fn from(account: &'a T) -> Self {
         Self {
-            lamports: account.lamports(),
+            carats: account.carats(),
             owner: *account.owner(),
             executable: account.executable(),
             rent_epoch: account.rent_epoch(),
@@ -100,7 +100,7 @@ impl<'a> StoredAccountMeta<'a> {
     /// Return a new Account by copying all the data referenced by the `StoredAccountMeta`.
     pub fn clone_account(&self) -> AccountSharedData {
         AccountSharedData::from(Account {
-            lamports: self.account_meta.lamports,
+            carats: self.account_meta.carats,
             owner: self.account_meta.owner,
             executable: self.account_meta.executable,
             rent_epoch: self.account_meta.rent_epoch,
@@ -109,7 +109,7 @@ impl<'a> StoredAccountMeta<'a> {
     }
 
     fn sanitize(&self) -> bool {
-        self.sanitize_executable() && self.sanitize_lamports()
+        self.sanitize_executable() && self.sanitize_carats()
     }
 
     fn sanitize_executable(&self) -> bool {
@@ -117,9 +117,9 @@ impl<'a> StoredAccountMeta<'a> {
         self.ref_executable_byte() & !1 == 0
     }
 
-    fn sanitize_lamports(&self) -> bool {
-        // Sanitize 0 lamports to ensure to be same as AccountSharedData::default()
-        self.account_meta.lamports != 0 || self.clone_account() == AccountSharedData::default()
+    fn sanitize_carats(&self) -> bool {
+        // Sanitize 0 carats to ensure to be same as AccountSharedData::default()
+        self.account_meta.carats != 0 || self.clone_account() == AccountSharedData::default()
     }
 
     fn ref_executable_byte(&self) -> &u8 {
@@ -633,13 +633,13 @@ pub mod tests {
     #[test]
     fn test_account_meta_non_default() {
         let def1 = AccountMeta {
-            lamports: 1,
+            carats: 1,
             owner: Pubkey::new_unique(),
             executable: true,
             rent_epoch: 3,
         };
         let def2_account = Account {
-            lamports: def1.lamports,
+            carats: def1.carats,
             owner: def1.owner,
             executable: def1.executable,
             rent_epoch: def1.rent_epoch,

@@ -271,8 +271,8 @@ impl VoteState {
                 // Calculate mine and theirs independently and symmetrically instead of
                 // using the remainder of the other to treat them strictly equally.
                 // This is also to cancel the rewarding if either of the parties
-                // should receive only fractional lamports, resulting in not being rewarded at all.
-                // Thus, note that we intentionally discard any residual fractional lamports.
+                // should receive only fractional carats, resulting in not being rewarded at all.
+                // Thus, note that we intentionally discard any residual fractional carats.
                 let mine = on * u128::from(split) / 100u128;
                 let theirs = on * u128::from(100 - split) / 100u128;
 
@@ -455,7 +455,7 @@ impl VoteState {
     }
 
     /// Number of "credits" owed to this account from the mining pool. Submit this
-    /// VoteState to the Rewards program to trade credits for lamports.
+    /// VoteState to the Rewards program to trade credits for carats.
     pub fn credits(&self) -> u64 {
         if self.epoch_credits.is_empty() {
             0
@@ -676,7 +676,7 @@ fn verify_authorized_signer<S: std::hash::BuildHasher>(
 /// Withdraw funds from the vote account
 pub fn withdraw<S: std::hash::BuildHasher>(
     vote_account: &KeyedAccount,
-    lamports: u64,
+    carats: u64,
     to_account: &KeyedAccount,
     signers: &HashSet<Pubkey, S>,
 ) -> Result<(), InstructionError> {
@@ -685,7 +685,7 @@ pub fn withdraw<S: std::hash::BuildHasher>(
 
     verify_authorized_signer(&vote_state.authorized_withdrawer, signers)?;
 
-    match vote_account.lamports()?.cmp(&lamports) {
+    match vote_account.carats()?.cmp(&carats) {
         Ordering::Less => return Err(InstructionError::InsufficientFunds),
         Ordering::Equal => {
             // Deinitialize upon zero-balance
@@ -695,10 +695,10 @@ pub fn withdraw<S: std::hash::BuildHasher>(
     }
     vote_account
         .try_account_ref_mut()?
-        .checked_sub_lamports(lamports)?;
+        .checked_sub_carats(carats)?;
     to_account
         .try_account_ref_mut()?
-        .checked_add_lamports(lamports)?;
+        .checked_add_carats(carats)?;
     Ok(())
 }
 
@@ -762,9 +762,9 @@ pub fn create_account_with_authorized(
     authorized_voter: &Pubkey,
     authorized_withdrawer: &Pubkey,
     commission: u8,
-    lamports: u64,
+    carats: u64,
 ) -> AccountSharedData {
-    let mut vote_account = AccountSharedData::new(lamports, VoteState::size_of(), &id());
+    let mut vote_account = AccountSharedData::new(carats, VoteState::size_of(), &id());
 
     let vote_state = VoteState::new(
         &VoteInit {
@@ -787,9 +787,9 @@ pub fn create_account(
     vote_pubkey: &Pubkey,
     node_pubkey: &Pubkey,
     commission: u8,
-    lamports: u64,
+    carats: u64,
 ) -> AccountSharedData {
-    create_account_with_authorized(node_pubkey, vote_pubkey, vote_pubkey, commission, lamports)
+    create_account_with_authorized(node_pubkey, vote_pubkey, vote_pubkey, commission, carats)
 }
 
 #[cfg(test)]
@@ -1687,25 +1687,25 @@ mod tests {
 
         // all good
         let to_account = RefCell::new(AccountSharedData::default());
-        let lamports = vote_account.borrow().lamports();
+        let carats = vote_account.borrow().carats();
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let pre_state: VoteStateVersions = vote_account.borrow().state().unwrap();
         let res = withdraw(
             &keyed_accounts[0],
-            lamports,
+            carats,
             &KeyedAccount::new(&solana_sdk::pubkey::new_rand(), false, &to_account),
             &signers,
         );
         assert_eq!(res, Ok(()));
-        assert_eq!(vote_account.borrow().lamports(), 0);
-        assert_eq!(to_account.borrow().lamports(), lamports);
+        assert_eq!(vote_account.borrow().carats(), 0);
+        assert_eq!(to_account.borrow().carats(), carats);
         let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
         // State has been deinitialized since balance is zero
         assert!(post_state.is_uninitialized());
 
         // reset balance and restore state, verify that authorized_withdrawer works
-        vote_account.borrow_mut().set_lamports(lamports);
+        vote_account.borrow_mut().set_carats(carats);
         vote_account.borrow_mut().set_state(&pre_state).unwrap();
 
         // authorize authorized_withdrawer
@@ -1732,13 +1732,13 @@ mod tests {
         let withdrawer_keyed_account = keyed_account_at_index(keyed_accounts, 1).unwrap();
         let res = withdraw(
             vote_keyed_account,
-            lamports,
+            carats,
             withdrawer_keyed_account,
             &signers,
         );
         assert_eq!(res, Ok(()));
-        assert_eq!(vote_account.borrow().lamports(), 0);
-        assert_eq!(withdrawer_account.borrow().lamports(), lamports);
+        assert_eq!(vote_account.borrow().carats(), 0);
+        assert_eq!(withdrawer_account.borrow().carats(), carats);
         let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
         // State has been deinitialized since balance is zero
         assert!(post_state.is_uninitialized());

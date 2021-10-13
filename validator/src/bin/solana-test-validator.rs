@@ -15,7 +15,7 @@ use {
         account::AccountSharedData,
         clock::Slot,
         epoch_schedule::{EpochSchedule, MINIMUM_SLOTS_PER_EPOCH},
-        native_token::gema_to_lamports,
+        native_token::gema_to_carats,
         pubkey::Pubkey,
         rent::Rent,
         rpc_port,
@@ -449,7 +449,7 @@ fn main() {
         None
     };
 
-    let faucet_lamports = gema_to_lamports(value_of(&matches, "faucet_sol").unwrap());
+    let faucet_carats = gema_to_carats(value_of(&matches, "faucet_sol").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
     if !faucet_keypair_file.exists() {
         write_keypair_file(&Keypair::new(), faucet_keypair_file.to_str().unwrap()).unwrap_or_else(
@@ -542,7 +542,7 @@ fn main() {
         .tower_storage(tower_storage)
         .add_account(
             faucet_pubkey,
-            AccountSharedData::new(faucet_lamports, 0, &system_program::id()),
+            AccountSharedData::new(faucet_carats, 0, &system_program::id()),
         )
         .rpc_config(JsonRpcConfig {
             enable_rpc_transaction_history: true,

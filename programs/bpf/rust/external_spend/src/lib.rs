@@ -12,10 +12,10 @@ fn process_instruction(
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> ProgramResult {
-    // account 0 is the mint and not owned by this program, any debit of its lamports
+    // account 0 is the mint and not owned by this program, any debit of its carats
     // should result in a failed program execution.  Test to ensure that this debit
     // is seen by the runtime and fails as expected
-    **accounts[0].lamports.borrow_mut() -= 1;
+    **accounts[0].carats.borrow_mut() -= 1;
 
     Ok(())
 }

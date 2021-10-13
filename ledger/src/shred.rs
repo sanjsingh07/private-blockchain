@@ -1660,7 +1660,7 @@ pub mod tests {
             system_transaction::transfer(
                 &Keypair::new(),          // from
                 &Pubkey::new_unique(),    // to
-                rng.gen(),                // lamports
+                rng.gen(),                // carats
                 hash::new_rand(&mut rng), // recent block hash
             )
         })

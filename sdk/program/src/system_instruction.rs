@@ -146,8 +146,8 @@ pub enum SystemInstruction {
     ///   0. `[WRITE, SIGNER]` Funding account
     ///   1. `[WRITE, SIGNER]` New account
     CreateAccount {
-        /// Number of lamports to transfer to the new account
-        lamports: u64,
+        /// Number of carats to transfer to the new account
+        carats: u64,
 
         /// Number of bytes of memory to allocate
         space: u64,
@@ -165,12 +165,12 @@ pub enum SystemInstruction {
         owner: Pubkey,
     },
 
-    /// Transfer lamports
+    /// Transfer carats
     ///
     /// # Account references
     ///   0. `[WRITE, SIGNER]` Funding account
     ///   1. `[WRITE]` Recipient account
-    Transfer { lamports: u64 },
+    Transfer { carats: u64 },
 
     /// Create a new account at an address derived from a base pubkey and a seed
     ///
@@ -187,8 +187,8 @@ pub enum SystemInstruction {
         /// String of ASCII chars, no longer than `Pubkey::MAX_SEED_LEN`
         seed: String,
 
-        /// Number of lamports to transfer to the new account
-        lamports: u64,
+        /// Number of carats to transfer to the new account
+        carats: u64,
 
         /// Number of bytes of memory to allocate
         space: u64,
@@ -214,7 +214,7 @@ pub enum SystemInstruction {
     ///   3. `[]` Rent sysvar
     ///   4. `[SIGNER]` Nonce authority
     ///
-    /// The `u64` parameter is the lamports to withdraw, which must leave the
+    /// The `u64` parameter is the carats to withdraw, which must leave the
     /// account balance above the rent exempt reserve or at zero.
     WithdrawNonceAccount(u64),
 
@@ -286,7 +286,7 @@ pub enum SystemInstruction {
         owner: Pubkey,
     },
 
-    /// Transfer lamports from a derived address
+    /// Transfer carats from a derived address
     ///
     /// # Account references
     ///   0. `[WRITE]` Funding account
@@ -294,7 +294,7 @@ pub enum SystemInstruction {
     ///   2. `[WRITE]` Recipient account
     TransferWithSeed {
         /// Amount to transfer
-        lamports: u64,
+        carats: u64,
 
         /// Seed to use to derive the funding account address
         from_seed: String,
@@ -307,7 +307,7 @@ pub enum SystemInstruction {
 pub fn create_account(
     from_pubkey: &Pubkey,
     to_pubkey: &Pubkey,
-    lamports: u64,
+    carats: u64,
     space: u64,
     owner: &Pubkey,
 ) -> Instruction {
@@ -318,7 +318,7 @@ pub fn create_account(
     Instruction::new_with_bincode(
         system_program::id(),
         &SystemInstruction::CreateAccount {
-            lamports,
+            carats,
             space,
             owner: *owner,
         },
@@ -333,7 +333,7 @@ pub fn create_account_with_seed(
     to_pubkey: &Pubkey, // must match create_with_seed(base, seed, owner)
     base: &Pubkey,
     seed: &str,
-    lamports: u64,
+    carats: u64,
     space: u64,
     owner: &Pubkey,
 ) -> Instruction {
@@ -348,7 +348,7 @@ pub fn create_account_with_seed(
         &SystemInstruction::CreateAccountWithSeed {
             base: *base,
             seed: seed.to_string(),
-            lamports,
+            carats,
             space,
             owner: *owner,
         },
@@ -386,14 +386,14 @@ pub fn assign_with_seed(
     )
 }
 
-pub fn transfer(from_pubkey: &Pubkey, to_pubkey: &Pubkey, lamports: u64) -> Instruction {
+pub fn transfer(from_pubkey: &Pubkey, to_pubkey: &Pubkey, carats: u64) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*from_pubkey, true),
         AccountMeta::new(*to_pubkey, false),
     ];
     Instruction::new_with_bincode(
         system_program::id(),
-        &SystemInstruction::Transfer { lamports },
+        &SystemInstruction::Transfer { carats },
         account_metas,
     )
 }
@@ -404,7 +404,7 @@ pub fn transfer_with_seed(
     from_seed: String,
     from_owner: &Pubkey,
     to_pubkey: &Pubkey,
-    lamports: u64,
+    carats: u64,
 ) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*from_pubkey, false),
@@ -414,7 +414,7 @@ pub fn transfer_with_seed(
     Instruction::new_with_bincode(
         system_program::id(),
         &SystemInstruction::TransferWithSeed {
-            lamports,
+            carats,
             from_seed,
             from_owner: *from_owner,
         },
@@ -455,10 +455,10 @@ pub fn allocate_with_seed(
 }
 
 /// Create and sign new SystemInstruction::Transfer transaction to many destinations
-pub fn transfer_many(from_pubkey: &Pubkey, to_lamports: &[(Pubkey, u64)]) -> Vec<Instruction> {
-    to_lamports
+pub fn transfer_many(from_pubkey: &Pubkey, to_carats: &[(Pubkey, u64)]) -> Vec<Instruction> {
+    to_carats
         .iter()
-        .map(|(to_pubkey, lamports)| transfer(from_pubkey, to_pubkey, *lamports))
+        .map(|(to_pubkey, carats)| transfer(from_pubkey, to_pubkey, *carats))
         .collect()
 }
 
@@ -468,7 +468,7 @@ pub fn create_nonce_account_with_seed(
     base: &Pubkey,
     seed: &str,
     authority: &Pubkey,
-    lamports: u64,
+    carats: u64,
 ) -> Vec<Instruction> {
     vec![
         create_account_with_seed(
@@ -476,7 +476,7 @@ pub fn create_nonce_account_with_seed(
             nonce_pubkey,
             base,
             seed,
-            lamports,
+            carats,
             nonce::State::size() as u64,
             &system_program::id(),
         ),
@@ -497,13 +497,13 @@ pub fn create_nonce_account(
     from_pubkey: &Pubkey,
     nonce_pubkey: &Pubkey,
     authority: &Pubkey,
-    lamports: u64,
+    carats: u64,
 ) -> Vec<Instruction> {
     vec![
         create_account(
             from_pubkey,
             nonce_pubkey,
-            lamports,
+            carats,
             nonce::State::size() as u64,
             &system_program::id(),
         ),
@@ -538,7 +538,7 @@ pub fn withdraw_nonce_account(
     nonce_pubkey: &Pubkey,
     authorized_pubkey: &Pubkey,
     to_pubkey: &Pubkey,
-    lamports: u64,
+    carats: u64,
 ) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*nonce_pubkey, false),
@@ -550,7 +550,7 @@ pub fn withdraw_nonce_account(
     ];
     Instruction::new_with_bincode(
         system_program::id(),
-        &SystemInstruction::WithdrawNonceAccount(lamports),
+        &SystemInstruction::WithdrawNonceAccount(carats),
         account_metas,
     )
 }
@@ -586,9 +586,9 @@ mod tests {
         let alice_pubkey = Pubkey::new_unique();
         let bob_pubkey = Pubkey::new_unique();
         let carol_pubkey = Pubkey::new_unique();
-        let to_lamports = vec![(bob_pubkey, 1), (carol_pubkey, 2)];
+        let to_carats = vec![(bob_pubkey, 1), (carol_pubkey, 2)];
 
-        let instructions = transfer_many(&alice_pubkey, &to_lamports);
+        let instructions = transfer_many(&alice_pubkey, &to_carats);
         assert_eq!(instructions.len(), 2);
         assert_eq!(get_keys(&instructions[0]), vec![alice_pubkey, bob_pubkey]);
         assert_eq!(get_keys(&instructions[1]), vec![alice_pubkey, carol_pubkey]);

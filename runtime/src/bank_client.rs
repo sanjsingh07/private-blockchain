@@ -65,16 +65,16 @@ impl AsyncClient for BankClient {
         self.async_send_message(&[keypair], message, recent_blockhash)
     }
 
-    /// Transfer `lamports` from `keypair` to `pubkey`
+    /// Transfer `carats` from `keypair` to `pubkey`
     fn async_transfer(
         &self,
-        lamports: u64,
+        carats: u64,
         keypair: &Keypair,
         pubkey: &Pubkey,
         recent_blockhash: Hash,
     ) -> Result<Signature> {
         let transfer_instruction =
-            system_instruction::transfer(&keypair.pubkey(), pubkey, lamports);
+            system_instruction::transfer(&keypair.pubkey(), pubkey, carats);
         self.async_send_instruction(keypair, transfer_instruction, recent_blockhash)
     }
 }
@@ -101,15 +101,15 @@ impl SyncClient for BankClient {
         self.send_and_confirm_message(&[keypair], message)
     }
 
-    /// Transfer `lamports` from `keypair` to `pubkey`
+    /// Transfer `carats` from `keypair` to `pubkey`
     fn transfer_and_confirm(
         &self,
-        lamports: u64,
+        carats: u64,
         keypair: &Keypair,
         pubkey: &Pubkey,
     ) -> Result<Signature> {
         let transfer_instruction =
-            system_instruction::transfer(&keypair.pubkey(), pubkey, lamports);
+            system_instruction::transfer(&keypair.pubkey(), pubkey, carats);
         self.send_and_confirm_instruction(keypair, transfer_instruction)
     }
 

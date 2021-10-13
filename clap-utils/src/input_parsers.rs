@@ -10,7 +10,7 @@ use {
         clock::UnixTimestamp,
         commitment_config::CommitmentConfig,
         genesis_config::ClusterType,
-        native_token::gema_to_lamports,
+        native_token::gema_to_carats,
         pubkey::Pubkey,
         signature::{read_keypair_file, Keypair, Signature, Signer},
     },
@@ -180,8 +180,8 @@ pub fn resolve_signer(
     )
 }
 
-pub fn lamports_of_sol(matches: &ArgMatches<'_>, name: &str) -> Option<u64> {
-    value_of(matches, name).map(gema_to_lamports)
+pub fn carats_of_sol(matches: &ArgMatches<'_>, name: &str) -> Option<u64> {
+    value_of(matches, name).map(gema_to_carats)
 }
 
 pub fn cluster_type_of(matches: &ArgMatches<'_>, name: &str) -> Option<ClusterType> {
@@ -352,20 +352,20 @@ mod tests {
     }
 
     #[test]
-    fn test_lamports_of_sol() {
+    fn test_carats_of_sol() {
         let matches = app()
             .clone()
             .get_matches_from(vec!["test", "--single", "50"]);
-        assert_eq!(lamports_of_sol(&matches, "single"), Some(50_000_000_000));
-        assert_eq!(lamports_of_sol(&matches, "multiple"), None);
+        assert_eq!(carats_of_sol(&matches, "single"), Some(50_000_000_000));
+        assert_eq!(carats_of_sol(&matches, "multiple"), None);
         let matches = app()
             .clone()
             .get_matches_from(vec!["test", "--single", "1.5"]);
-        assert_eq!(lamports_of_sol(&matches, "single"), Some(1_500_000_000));
-        assert_eq!(lamports_of_sol(&matches, "multiple"), None);
+        assert_eq!(carats_of_sol(&matches, "single"), Some(1_500_000_000));
+        assert_eq!(carats_of_sol(&matches, "multiple"), None);
         let matches = app()
             .clone()
             .get_matches_from(vec!["test", "--single", "0.03"]);
-        assert_eq!(lamports_of_sol(&matches, "single"), Some(30_000_000));
+        assert_eq!(carats_of_sol(&matches, "single"), Some(30_000_000));
     }
 }

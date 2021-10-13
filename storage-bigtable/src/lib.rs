@@ -239,15 +239,15 @@ type StoredConfirmedBlockRewards = Vec<StoredConfirmedBlockReward>;
 #[derive(Serialize, Deserialize)]
 struct StoredConfirmedBlockReward {
     pubkey: String,
-    lamports: i64,
+    carats: i64,
 }
 
 impl From<StoredConfirmedBlockReward> for Reward {
     fn from(value: StoredConfirmedBlockReward) -> Self {
-        let StoredConfirmedBlockReward { pubkey, lamports } = value;
+        let StoredConfirmedBlockReward { pubkey, carats } = value;
         Self {
             pubkey,
-            lamports,
+            carats,
             post_balance: 0,
             reward_type: None,
             commission: None,
@@ -258,9 +258,9 @@ impl From<StoredConfirmedBlockReward> for Reward {
 impl From<Reward> for StoredConfirmedBlockReward {
     fn from(value: Reward) -> Self {
         let Reward {
-            pubkey, lamports, ..
+            pubkey, carats, ..
         } = value;
-        Self { pubkey, lamports }
+        Self { pubkey, carats }
     }
 }
 

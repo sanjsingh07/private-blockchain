@@ -1,14 +1,14 @@
 #![allow(clippy::integer_arithmetic)]
-/// There are 10^9 lamports in one SOL
+/// There are 10^9 carats in one SOL
 pub const LAMPORTS_PER_GEMA: u64 = 1_000_000_000;
 
-/// Approximately convert fractional native tokens (lamports) into native tokens (GEMA)
-pub fn lamports_to_gema(lamports: u64) -> f64 {
-    lamports as f64 / LAMPORTS_PER_GEMA as f64
+/// Approximately convert fractional native tokens (carats) into native tokens (GEMA)
+pub fn carats_to_gema(carats: u64) -> f64 {
+    carats as f64 / LAMPORTS_PER_GEMA as f64
 }
 
-/// Approximately convert native tokens (GEMA) into fractional native tokens (lamports)
-pub fn gema_to_lamports(nub: f64) -> u64 {
+/// Approximately convert native tokens (GEMA) into fractional native tokens (carats)
+pub fn gema_to_carats(nub: f64) -> u64 {
     (nub * LAMPORTS_PER_GEMA as f64) as u64
 }
 

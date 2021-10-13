@@ -12,7 +12,7 @@ use solana_clap_utils::{
 };
 use solana_cli_config::CONFIG_FILE;
 use solana_remote_wallet::remote_wallet::maybe_wallet_manager;
-use solana_sdk::native_token::gema_to_lamports;
+use solana_sdk::native_token::gema_to_carats;
 use std::{error::Error, ffi::OsString, process::exit};
 
 fn get_matches<'a, I, T>(args: I) -> ArgMatches<'a>
@@ -431,7 +431,7 @@ fn parse_distribute_tokens_args(
         fee_payer,
         stake_args: None,
         spl_token_args: None,
-        transfer_amount: value_of(matches, "transfer_amount").map(gema_to_lamports),
+        transfer_amount: value_of(matches, "transfer_amount").map(gema_to_carats),
     })
 }
 
@@ -470,7 +470,7 @@ fn parse_create_stake_args(
         .transpose()?;
 
     let stake_args = StakeArgs {
-        unlocked_sol: gema_to_lamports(value_t_or_exit!(matches, "unlocked_sol", f64)),
+        unlocked_sol: gema_to_carats(value_t_or_exit!(matches, "unlocked_sol", f64)),
         lockup_authority,
         sender_stake_args: None,
     };
@@ -553,7 +553,7 @@ fn parse_distribute_stake_args(
         lockup_authority,
     };
     let stake_args = StakeArgs {
-        unlocked_sol: gema_to_lamports(value_t_or_exit!(matches, "unlocked_sol", f64)),
+        unlocked_sol: gema_to_carats(value_t_or_exit!(matches, "unlocked_sol", f64)),
         lockup_authority: lockup_authority_address,
         sender_stake_args: Some(sender_stake_args),
     };

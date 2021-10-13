@@ -90,7 +90,7 @@ pub fn meta_from(account: &AccountSharedData) -> Option<Meta> {
 
 fn redelegate(
     stake: &mut Stake,
-    stake_lamports: u64,
+    stake_carats: u64,
     voter_pubkey: &Pubkey,
     vote_state: &VoteState,
     clock: &Clock,
@@ -118,7 +118,7 @@ fn redelegate(
     // deactivated this epoch, or has fully de-activated.
     // Redelegation implies either re-activation or un-deactivation
 
-    stake.delegation.stake = stake_lamports;
+    stake.delegation.stake = stake_carats;
     stake.delegation.activation_epoch = clock.epoch;
     stake.delegation.deactivation_epoch = std::u64::MAX;
     stake.delegation.voter_pubkey = *voter_pubkey;
@@ -145,13 +145,13 @@ fn new_stake(
     }
 }
 
-/// captures a rewards round as lamports to be awarded
-///  and the total points over which those lamports
+/// captures a rewards round as carats to be awarded
+///  and the total points over which those carats
 ///  are to be distributed
 //  basically read as rewards/points, but in integers instead of as an f64
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointValue {
-    pub rewards: u64, // lamports to split
+    pub rewards: u64, // carats to split
     pub points: u128, // over these points
 }
 
@@ -318,7 +318,7 @@ fn calculate_stake_rewards(
 
     let rewards = u64::try_from(rewards).unwrap();
 
-    // don't bother trying to split if fractional lamports got truncated
+    // don't bother trying to split if fractional carats got truncated
     if rewards == 0 {
         if let Some(inflation_point_calc_tracer) = inflation_point_calc_tracer {
             inflation_point_calc_tracer(&SkippedReason::ZeroReward.into());
@@ -390,7 +390,7 @@ pub trait StakeAccount {
     ) -> Result<(), InstructionError>;
     fn split(
         &self,
-        lamports: u64,
+        carats: u64,
         split_stake: &KeyedAccount,
         signers: &HashSet<Pubkey>,
     ) -> Result<(), InstructionError>;
@@ -405,7 +405,7 @@ pub trait StakeAccount {
     ) -> Result<(), InstructionError>;
     fn withdraw(
         &self,
-        lamports: u64,
+        carats: u64,
         to: &KeyedAccount,
         clock: &Clock,
         stake_history: &StakeHistory,
@@ -428,7 +428,7 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
         if let StakeState::Uninitialized = self.state()? {
             let rent_exempt_reserve = rent.minimum_balance(self.data_len()?);
 
-            if rent_exempt_reserve < self.lamports()? {
+            if rent_exempt_reserve < self.carats()? {
                 self.set_state(&StakeState::Initialized(Meta {
                     rent_exempt_reserve,
                     authorized: *authorized,
@@ -529,7 +529,7 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
             StakeState::Initialized(meta) => {
                 meta.authorized.check(signers, StakeAuthorize::Staker)?;
                 let stake = new_stake(
-                    self.lamports()?.saturating_sub(meta.rent_exempt_reserve), // can't stake the rent ;)
+                    self.carats()?.saturating_sub(meta.rent_exempt_reserve), // can't stake the rent ;)
                     vote_account.unsigned_key(),
                     &State::<VoteStateVersions>::state(vote_account)?.convert_to_current(),
                     clock.epoch,
@@ -541,7 +541,7 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
                 meta.authorized.check(signers, StakeAuthorize::Staker)?;
                 redelegate(
                     &mut stake,
-                    self.lamports()?.saturating_sub(meta.rent_exempt_reserve), // can't stake the rent ;)
+                    self.carats()?.saturating_sub(meta.rent_exempt_reserve), // can't stake the rent ;)
                     vote_account.unsigned_key(),
                     &State::<VoteStateVersions>::state(vote_account)?.convert_to_current(),
                     clock,
@@ -585,7 +585,7 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
 
     fn split(
         &self,
-        lamports: u64,
+        carats: u64,
         split: &KeyedAccount,
         signers: &HashSet<Pubkey>,
     ) -> Result<(), InstructionError> {
@@ -597,8 +597,8 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
         }
 
         if let StakeState::Uninitialized = split.state()? {
-            // verify enough account lamports
-            if lamports > self.lamports()? {
+            // verify enough account carats
+            if carats > self.carats()? {
                 return Err(InstructionError::InsufficientFunds);
             }
 
@@ -611,22 +611,22 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
                         split.data_len()? as u64,
                     );
 
-                    // verify enough lamports for rent and more than 0 stake in new split account
-                    if lamports <= split_rent_exempt_reserve.saturating_sub(split.lamports()?)
+                    // verify enough carats for rent and more than 0 stake in new split account
+                    if carats <= split_rent_exempt_reserve.saturating_sub(split.carats()?)
                         // if not full withdrawal
-                        || (lamports != self.lamports()?
+                        || (carats != self.carats()?
                             // verify more than 0 stake left in previous stake
-                            && checked_add(lamports, meta.rent_exempt_reserve)? >= self.lamports()?)
+                            && checked_add(carats, meta.rent_exempt_reserve)? >= self.carats()?)
                     {
                         return Err(InstructionError::InsufficientFunds);
                     }
                     // split the stake, subtract rent_exempt_balance unless
-                    // the destination account already has those lamports
+                    // the destination account already has those carats
                     // in place.
                     // this means that the new stake account will have a stake equivalent to
-                    // lamports minus rent_exempt_reserve if it starts out with a zero balance
-                    let (remaining_stake_delta, split_stake_amount) = if lamports
-                        == self.lamports()?
+                    // carats minus rent_exempt_reserve if it starts out with a zero balance
+                    let (remaining_stake_delta, split_stake_amount) = if carats
+                        == self.carats()?
                     {
                         // If split amount equals the full source stake, the new split stake must
                         // equal the same amount, regardless of any current lamport balance in the
@@ -638,14 +638,14 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
                         // to prevent magic activation of stake by splitting between accounts of
                         // different sizes.
                         let remaining_stake_delta =
-                            lamports.saturating_sub(meta.rent_exempt_reserve);
+                            carats.saturating_sub(meta.rent_exempt_reserve);
                         (remaining_stake_delta, remaining_stake_delta)
                     } else {
                         // Otherwise, the new split stake should reflect the entire split
-                        // requested, less any lamports needed to cover the split_rent_exempt_reserve
+                        // requested, less any carats needed to cover the split_rent_exempt_reserve
                         (
-                            lamports,
-                            lamports - split_rent_exempt_reserve.saturating_sub(split.lamports()?),
+                            carats,
+                            carats - split_rent_exempt_reserve.saturating_sub(split.carats()?),
                         )
                     };
                     let split_stake = stake.split(remaining_stake_delta, split_stake_amount)?;
@@ -663,12 +663,12 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
                         split.data_len()? as u64,
                     );
 
-                    // enough lamports for rent and more than 0 stake in new split account
-                    if lamports <= split_rent_exempt_reserve.saturating_sub(split.lamports()?)
+                    // enough carats for rent and more than 0 stake in new split account
+                    if carats <= split_rent_exempt_reserve.saturating_sub(split.carats()?)
                         // if not full withdrawal
-                        || (lamports != self.lamports()?
+                        || (carats != self.carats()?
                             // verify more than 0 stake left in previous stake
-                            && checked_add(lamports, meta.rent_exempt_reserve)? >= self.lamports()?)
+                            && checked_add(carats, meta.rent_exempt_reserve)? >= self.carats()?)
                     {
                         return Err(InstructionError::InsufficientFunds);
                     }
@@ -686,14 +686,14 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
             }
 
             // Deinitialize state upon zero balance
-            if lamports == self.lamports()? {
+            if carats == self.carats()? {
                 self.set_state(&StakeState::Uninitialized)?;
             }
 
             split
                 .try_account_ref_mut()?
-                .checked_add_lamports(lamports)?;
-            self.try_account_ref_mut()?.checked_sub_lamports(lamports)?;
+                .checked_add_carats(carats)?;
+            self.try_account_ref_mut()?.checked_sub_carats(carats)?;
             Ok(())
         } else {
             Err(InstructionError::InvalidAccountData)
@@ -747,17 +747,17 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
         source_account.set_state(&StakeState::Uninitialized)?;
 
         // Drain the source stake account
-        let lamports = source_account.lamports()?;
+        let carats = source_account.carats()?;
         source_account
             .try_account_ref_mut()?
-            .checked_sub_lamports(lamports)?;
-        self.try_account_ref_mut()?.checked_add_lamports(lamports)?;
+            .checked_sub_carats(carats)?;
+        self.try_account_ref_mut()?.checked_add_carats(carats)?;
         Ok(())
     }
 
     fn withdraw(
         &self,
-        lamports: u64,
+        carats: u64,
         to: &KeyedAccount,
         clock: &Clock,
         stake_history: &StakeHistory,
@@ -815,28 +815,28 @@ impl<'a> StakeAccount for KeyedAccount<'a> {
             return Err(StakeError::LockupInForce.into());
         }
 
-        let lamports_and_reserve = checked_add(lamports, reserve)?;
+        let carats_and_reserve = checked_add(carats, reserve)?;
         // if the stake is active, we mustn't allow the account to go away
         if is_staked // line coverage for branch coverage
-            && lamports_and_reserve > self.lamports()?
+            && carats_and_reserve > self.carats()?
         {
             return Err(InstructionError::InsufficientFunds);
         }
 
-        if lamports != self.lamports()? // not a full withdrawal
-            && lamports_and_reserve > self.lamports()?
+        if carats != self.carats()? // not a full withdrawal
+            && carats_and_reserve > self.carats()?
         {
             assert!(!is_staked);
             return Err(InstructionError::InsufficientFunds);
         }
 
         // Deinitialize state upon zero balance
-        if lamports == self.lamports()? {
+        if carats == self.carats()? {
             self.set_state(&StakeState::Uninitialized)?;
         }
 
-        self.try_account_ref_mut()?.checked_sub_lamports(lamports)?;
-        to.try_account_ref_mut()?.checked_add_lamports(lamports)?;
+        self.try_account_ref_mut()?.checked_sub_carats(carats)?;
+        to.try_account_ref_mut()?.checked_add_carats(carats)?;
         Ok(())
     }
 }
@@ -881,7 +881,7 @@ impl MergeKind {
                 {
                     /*
                     (e, a, d): e - effective, a - activating, d - deactivating */
-                    (0, 0, 0) => Ok(Self::Inactive(meta, stake_keyed_account.lamports()?)),
+                    (0, 0, 0) => Ok(Self::Inactive(meta, stake_keyed_account.carats()?)),
                     (0, _, _) => Ok(Self::ActivationEpoch(meta, stake)),
                     (_, 0, 0) => Ok(Self::FullyActive(meta, stake)),
                     _ => {
@@ -892,7 +892,7 @@ impl MergeKind {
                 }
             }
             StakeState::Initialized(meta) => {
-                Ok(Self::Inactive(meta, stake_keyed_account.lamports()?))
+                Ok(Self::Inactive(meta, stake_keyed_account.carats()?))
             }
             _ => Err(InstructionError::InvalidAccountData),
         }
@@ -995,22 +995,22 @@ impl MergeKind {
         let merged_state = match (self, source) {
             (Self::Inactive(_, _), Self::Inactive(_, _)) => None,
             (Self::Inactive(_, _), Self::ActivationEpoch(_, _)) => None,
-            (Self::ActivationEpoch(meta, mut stake), Self::Inactive(_, source_lamports)) => {
-                stake.delegation.stake = checked_add(stake.delegation.stake, source_lamports)?;
+            (Self::ActivationEpoch(meta, mut stake), Self::Inactive(_, source_carats)) => {
+                stake.delegation.stake = checked_add(stake.delegation.stake, source_carats)?;
                 Some(StakeState::Stake(meta, stake))
             }
             (
                 Self::ActivationEpoch(meta, mut stake),
                 Self::ActivationEpoch(source_meta, source_stake),
             ) => {
-                let source_lamports = checked_add(
+                let source_carats = checked_add(
                     source_meta.rent_exempt_reserve,
                     source_stake.delegation.stake,
                 )?;
                 merge_delegation_stake_and_credits_observed(
                     invoke_context,
                     &mut stake,
-                    source_lamports,
+                    source_carats,
                     source_stake.credits_observed,
                 )?;
                 Some(StakeState::Stake(meta, stake))
@@ -1019,7 +1019,7 @@ impl MergeKind {
                 // Don't stake the source account's `rent_exempt_reserve` to
                 // protect against the magic activation loophole. It will
                 // instead be moved into the destination account as extra,
-                // withdrawable `lamports`
+                // withdrawable `carats`
                 merge_delegation_stake_and_credits_observed(
                     invoke_context,
                     &mut stake,
@@ -1037,15 +1037,15 @@ impl MergeKind {
 fn merge_delegation_stake_and_credits_observed(
     invoke_context: &dyn InvokeContext,
     stake: &mut Stake,
-    absorbed_lamports: u64,
+    absorbed_carats: u64,
     absorbed_credits_observed: u64,
 ) -> Result<(), InstructionError> {
     if invoke_context.is_feature_active(&stake_merge_with_unmatched_credits_observed::id()) {
         stake.credits_observed =
-            stake_weighted_credits_observed(stake, absorbed_lamports, absorbed_credits_observed)
+            stake_weighted_credits_observed(stake, absorbed_carats, absorbed_credits_observed)
                 .ok_or(InstructionError::ArithmeticOverflow)?;
     }
-    stake.delegation.stake = checked_add(stake.delegation.stake, absorbed_lamports)?;
+    stake.delegation.stake = checked_add(stake.delegation.stake, absorbed_carats)?;
     Ok(())
 }
 
@@ -1076,17 +1076,17 @@ fn merge_delegation_stake_and_credits_observed(
 ///  calculation against vote_account and point indirection.)
 fn stake_weighted_credits_observed(
     stake: &Stake,
-    absorbed_lamports: u64,
+    absorbed_carats: u64,
     absorbed_credits_observed: u64,
 ) -> Option<u64> {
     if stake.credits_observed == absorbed_credits_observed {
         Some(stake.credits_observed)
     } else {
-        let total_stake = u128::from(stake.delegation.stake.checked_add(absorbed_lamports)?);
+        let total_stake = u128::from(stake.delegation.stake.checked_add(absorbed_carats)?);
         let stake_weighted_credits =
             u128::from(stake.credits_observed).checked_mul(u128::from(stake.delegation.stake))?;
         let absorbed_weighted_credits =
-            u128::from(absorbed_credits_observed).checked_mul(u128::from(absorbed_lamports))?;
+            u128::from(absorbed_credits_observed).checked_mul(u128::from(absorbed_carats))?;
         // Discard fractional credits as a merge side-effect friction by taking
         // the ceiling, done by adding `denominator - 1` to the numerator.
         let total_weighted_credits = stake_weighted_credits
@@ -1133,8 +1133,8 @@ pub fn redeem_rewards(
             inflation_point_calc_tracer,
             fix_activating_credits_observed,
         ) {
-            stake_account.checked_add_lamports(stakers_reward)?;
-            vote_account.checked_add_lamports(voters_reward)?;
+            stake_account.checked_add_carats(stakers_reward)?;
+            vote_account.checked_add_carats(voters_reward)?;
 
             stake_account.set_state(&StakeState::Stake(meta, stake))?;
 
@@ -1176,9 +1176,9 @@ fn calculate_split_rent_exempt_reserve(
     source_data_len: u64,
     split_data_len: u64,
 ) -> u64 {
-    let lamports_per_byte_year =
+    let carats_per_byte_year =
         source_rent_exempt_reserve / (source_data_len + ACCOUNT_STORAGE_OVERHEAD);
-    lamports_per_byte_year * (split_data_len + ACCOUNT_STORAGE_OVERHEAD)
+    carats_per_byte_year * (split_data_len + ACCOUNT_STORAGE_OVERHEAD)
 }
 
 pub type RewriteStakeStatus = (&'static str, (u64, u64), (u64, u64));
@@ -1213,16 +1213,16 @@ pub fn create_lockup_stake_account(
     authorized: &Authorized,
     lockup: &Lockup,
     rent: &Rent,
-    lamports: u64,
+    carats: u64,
 ) -> AccountSharedData {
     let mut stake_account =
-        AccountSharedData::new(lamports, std::mem::size_of::<StakeState>(), &id());
+        AccountSharedData::new(carats, std::mem::size_of::<StakeState>(), &id());
 
     let rent_exempt_reserve = rent.minimum_balance(stake_account.data().len());
     assert!(
-        lamports >= rent_exempt_reserve,
-        "lamports: {} is less than rent_exempt_reserve {}",
-        lamports,
+        carats >= rent_exempt_reserve,
+        "carats: {} is less than rent_exempt_reserve {}",
+        carats,
         rent_exempt_reserve
     );
 
@@ -1243,14 +1243,14 @@ pub fn create_account(
     voter_pubkey: &Pubkey,
     vote_account: &AccountSharedData,
     rent: &Rent,
-    lamports: u64,
+    carats: u64,
 ) -> AccountSharedData {
     do_create_account(
         authorized,
         voter_pubkey,
         vote_account,
         rent,
-        lamports,
+        carats,
         Epoch::MAX,
     )
 }
@@ -1261,7 +1261,7 @@ pub fn create_account_with_activation_epoch(
     voter_pubkey: &Pubkey,
     vote_account: &AccountSharedData,
     rent: &Rent,
-    lamports: u64,
+    carats: u64,
     activation_epoch: Epoch,
 ) -> AccountSharedData {
     do_create_account(
@@ -1269,7 +1269,7 @@ pub fn create_account_with_activation_epoch(
         voter_pubkey,
         vote_account,
         rent,
-        lamports,
+        carats,
         activation_epoch,
     )
 }
@@ -1279,11 +1279,11 @@ fn do_create_account(
     voter_pubkey: &Pubkey,
     vote_account: &AccountSharedData,
     rent: &Rent,
-    lamports: u64,
+    carats: u64,
     activation_epoch: Epoch,
 ) -> AccountSharedData {
     let mut stake_account =
-        AccountSharedData::new(lamports, std::mem::size_of::<StakeState>(), &id());
+        AccountSharedData::new(carats, std::mem::size_of::<StakeState>(), &id());
 
     let vote_state = VoteState::from(vote_account).expect("vote_state");
 
@@ -1297,7 +1297,7 @@ fn do_create_account(
                 ..Meta::default()
             },
             new_stake(
-                lamports - rent_exempt_reserve, // underflow is an error, is basically: assert!(lamports > rent_exempt_reserve);
+                carats - rent_exempt_reserve, // underflow is an error, is basically: assert!(carats > rent_exempt_reserve);
                 voter_pubkey,
                 &vote_state,
                 activation_epoch,
@@ -1531,9 +1531,9 @@ mod tests {
             .unwrap();
 
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(Meta {
                 authorized: Authorized {
                     staker: stake_pubkey,
@@ -1583,7 +1583,7 @@ mod tests {
             Stake {
                 delegation: Delegation {
                     voter_pubkey: vote_pubkey,
-                    stake: stake_lamports,
+                    stake: stake_carats,
                     activation_epoch: clock.epoch,
                     deactivation_epoch: std::u64::MAX,
                     ..Delegation::default()
@@ -1699,7 +1699,7 @@ mod tests {
             Stake {
                 delegation: Delegation {
                     voter_pubkey: vote_pubkey_2,
-                    stake: stake_lamports,
+                    stake: stake_carats,
                     activation_epoch: clock.epoch,
                     deactivation_epoch: std::u64::MAX,
                     ..Delegation::default()
@@ -2290,9 +2290,9 @@ mod tests {
     #[test]
     fn test_stake_initialize() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account =
-            AccountSharedData::new_ref(stake_lamports, std::mem::size_of::<StakeState>(), &id());
+            AccountSharedData::new_ref(stake_carats, std::mem::size_of::<StakeState>(), &id());
 
         // unsigned keyed account
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, false, &stake_account);
@@ -2304,7 +2304,7 @@ mod tests {
                 &Authorized::default(),
                 &Lockup::default(),
                 &Rent {
-                    lamports_per_byte_year: 42,
+                    carats_per_byte_year: 42,
                     ..Rent::free()
                 },
             ),
@@ -2354,9 +2354,9 @@ mod tests {
     #[test]
     fn test_initialize_incorrect_account_sizes() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref(
-            stake_lamports,
+            stake_carats,
             std::mem::size_of::<StakeState>() + 1,
             &id(),
         );
@@ -2367,7 +2367,7 @@ mod tests {
                 &Authorized::default(),
                 &Lockup::default(),
                 &Rent {
-                    lamports_per_byte_year: 42,
+                    carats_per_byte_year: 42,
                     ..Rent::free()
                 },
             ),
@@ -2375,7 +2375,7 @@ mod tests {
         );
 
         let stake_account = AccountSharedData::new_ref(
-            stake_lamports,
+            stake_carats,
             std::mem::size_of::<StakeState>() - 1,
             &id(),
         );
@@ -2386,7 +2386,7 @@ mod tests {
                 &Authorized::default(),
                 &Lockup::default(),
                 &Rent {
-                    lamports_per_byte_year: 42,
+                    carats_per_byte_year: 42,
                     ..Rent::free()
                 },
             ),
@@ -2397,9 +2397,9 @@ mod tests {
     #[test]
     fn test_deactivate() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(Meta::auto(&stake_pubkey)),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -2464,9 +2464,9 @@ mod tests {
     #[test]
     fn test_set_lockup() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Uninitialized,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -2565,9 +2565,9 @@ mod tests {
     #[test]
     fn test_optional_lockup_for_stake_program_v3_and_earlier() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Uninitialized,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -2684,9 +2684,9 @@ mod tests {
     #[test]
     fn test_optional_lockup_for_stake_program_v4() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Uninitialized,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -2795,9 +2795,9 @@ mod tests {
     #[test]
     fn test_withdraw_stake() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Uninitialized,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -2814,7 +2814,7 @@ mod tests {
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, false, &stake_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports,
+                stake_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -2830,7 +2830,7 @@ mod tests {
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports,
+                stake_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -2840,11 +2840,11 @@ mod tests {
             ),
             Ok(())
         );
-        assert_eq!(stake_account.borrow().lamports(), 0);
+        assert_eq!(stake_account.borrow().carats(), 0);
         assert_eq!(stake_keyed_account.state(), Ok(StakeState::Uninitialized));
 
         // reset balance
-        stake_account.borrow_mut().set_lamports(stake_lamports);
+        stake_account.borrow_mut().set_carats(stake_carats);
 
         // lockup
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
@@ -2866,7 +2866,7 @@ mod tests {
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports + 1,
+                stake_carats + 1,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -2877,7 +2877,7 @@ mod tests {
             Err(InstructionError::InsufficientFunds)
         );
 
-        // Stake some lamports (available lamports for withdrawals will reduce to zero)
+        // Stake some carats (available carats for withdrawals will reduce to zero)
         let vote_pubkey = solana_sdk::pubkey::new_rand();
         let vote_account = RefCell::new(vote_state::create_account(
             &vote_pubkey,
@@ -2903,7 +2903,7 @@ mod tests {
         );
 
         // simulate rewards
-        stake_account.borrow_mut().checked_add_lamports(10).unwrap();
+        stake_account.borrow_mut().checked_add_carats(10).unwrap();
         // withdrawal before deactivate works for rewards amount
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
@@ -2921,7 +2921,7 @@ mod tests {
         );
 
         // simulate rewards
-        stake_account.borrow_mut().checked_add_lamports(10).unwrap();
+        stake_account.borrow_mut().checked_add_carats(10).unwrap();
         // withdrawal of rewards fails if not in excess of stake
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
@@ -2947,7 +2947,7 @@ mod tests {
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports + 10 + 1,
+                stake_carats + 10 + 1,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -2958,11 +2958,11 @@ mod tests {
             Err(InstructionError::InsufficientFunds)
         );
 
-        // Try to withdraw all lamports
+        // Try to withdraw all carats
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports + 10,
+                stake_carats + 10,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -2972,7 +2972,7 @@ mod tests {
             ),
             Ok(())
         );
-        assert_eq!(stake_account.borrow().lamports(), 0);
+        assert_eq!(stake_account.borrow().carats(), 0);
         assert_eq!(stake_keyed_account.state(), Ok(StakeState::Uninitialized));
 
         // overflow
@@ -3034,10 +3034,10 @@ mod tests {
     #[test]
     fn test_withdraw_stake_before_warmup() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let total_lamports = 100;
-        let stake_lamports = 42;
+        let total_carats = 100;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            total_lamports,
+            total_carats,
             &StakeState::Initialized(Meta::auto(&stake_pubkey)),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -3054,7 +3054,7 @@ mod tests {
 
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
-        // Stake some lamports (available lamports for withdrawals will reduce)
+        // Stake some carats (available carats for withdrawals will reduce)
         let vote_pubkey = solana_sdk::pubkey::new_rand();
         let vote_account = RefCell::new(vote_state::create_account(
             &vote_pubkey,
@@ -3090,7 +3090,7 @@ mod tests {
         // Try to withdraw stake
         assert_eq!(
             stake_keyed_account.withdraw(
-                total_lamports - stake_lamports + 1,
+                total_carats - stake_carats + 1,
                 &to_keyed_account,
                 &clock,
                 &stake_history,
@@ -3105,9 +3105,9 @@ mod tests {
     #[test]
     fn test_withdraw_stake_invalid_state() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let total_lamports = 100;
+        let total_carats = 100;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            total_lamports,
+            total_carats,
             &StakeState::RewardsPool,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -3120,7 +3120,7 @@ mod tests {
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                total_lamports,
+                total_carats,
                 &to_keyed_account,
                 &Clock::default(),
                 &StakeHistory::default(),
@@ -3136,9 +3136,9 @@ mod tests {
     fn test_withdraw_lockup() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let custodian = solana_sdk::pubkey::new_rand();
-        let total_lamports = 100;
+        let total_carats = 100;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            total_lamports,
+            total_carats,
             &StakeState::Initialized(Meta {
                 lockup: Lockup {
                     unix_timestamp: 0,
@@ -3163,7 +3163,7 @@ mod tests {
         // lockup is still in force, can't withdraw
         assert_eq!(
             stake_keyed_account.withdraw(
-                total_lamports,
+                total_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -3179,7 +3179,7 @@ mod tests {
             let custodian_keyed_account = KeyedAccount::new(&custodian, true, &custodian_account);
             assert_eq!(
                 stake_keyed_account.withdraw(
-                    total_lamports,
+                    total_carats,
                     &to_keyed_account,
                     &clock,
                     &StakeHistory::default(),
@@ -3194,14 +3194,14 @@ mod tests {
         stake_keyed_account
             .account
             .borrow_mut()
-            .set_lamports(total_lamports);
+            .set_carats(total_carats);
 
         // lockup has expired
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         clock.epoch += 1;
         assert_eq!(
             stake_keyed_account.withdraw(
-                total_lamports,
+                total_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -3218,9 +3218,9 @@ mod tests {
     fn test_withdraw_identical_authorities() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let custodian = stake_pubkey;
-        let total_lamports = 100;
+        let total_carats = 100;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            total_lamports,
+            total_carats,
             &StakeState::Initialized(Meta {
                 lockup: Lockup {
                     unix_timestamp: 0,
@@ -3245,7 +3245,7 @@ mod tests {
         // lockup is still in force, even though custodian is the same as the withdraw authority
         assert_eq!(
             stake_keyed_account.withdraw(
-                total_lamports,
+                total_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -3260,7 +3260,7 @@ mod tests {
             let custodian_keyed_account = KeyedAccount::new(&custodian, true, &stake_account);
             assert_eq!(
                 stake_keyed_account.withdraw(
-                    total_lamports,
+                    total_carats,
                     &to_keyed_account,
                     &clock,
                     &StakeHistory::default(),
@@ -3313,7 +3313,7 @@ mod tests {
         );
         stake_account
             .borrow_mut()
-            .checked_add_lamports(stake)
+            .checked_add_carats(stake)
             .unwrap(); // top up account
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
         assert_eq!(
@@ -3378,9 +3378,9 @@ mod tests {
         let mut vote_state = VoteState::default();
         // assume stake.stake() is right
         // bootstrap means fully-vested stake at epoch 0
-        let stake_lamports = 1;
+        let stake_carats = 1;
         let mut stake = new_stake(
-            stake_lamports,
+            stake_carats,
             &Pubkey::default(),
             &vote_state,
             std::u64::MAX,
@@ -3410,7 +3410,7 @@ mod tests {
 
         // this one should be able to collect exactly 2
         assert_eq!(
-            Some((stake_lamports * 2, 0)),
+            Some((stake_carats * 2, 0)),
             redeem_stake_rewards(
                 0,
                 &mut stake,
@@ -3427,7 +3427,7 @@ mod tests {
 
         assert_eq!(
             stake.delegation.stake,
-            stake_lamports + (stake_lamports * 2)
+            stake_carats + (stake_carats * 2)
         );
         assert_eq!(stake.credits_observed, 2);
     }
@@ -3439,7 +3439,7 @@ mod tests {
         // bootstrap means fully-vested stake at epoch 0 with
         //  10_000_000 GEMA is a big but not unreasaonable stake
         let stake = new_stake(
-            native_token::gema_to_lamports(10_000_000f64),
+            native_token::gema_to_carats(10_000_000f64),
             &Pubkey::default(),
             &vote_state,
             std::u64::MAX,
@@ -3738,9 +3738,9 @@ mod tests {
     #[test]
     fn test_authorize_uninit() {
         let new_authority = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::default(),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -3765,9 +3765,9 @@ mod tests {
     #[test]
     fn test_authorize_lockup() {
         let stake_authority = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(Meta::auto(&stake_authority)),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -3869,7 +3869,7 @@ mod tests {
         // Test that withdrawal to account fails without authorized withdrawer
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports,
+                stake_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -3886,7 +3886,7 @@ mod tests {
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         assert_eq!(
             stake_keyed_account.withdraw(
-                stake_lamports,
+                stake_carats,
                 &to_keyed_account,
                 &clock,
                 &StakeHistory::default(),
@@ -3904,9 +3904,9 @@ mod tests {
         let base_pubkey = solana_sdk::pubkey::new_rand();
         let seed = "42";
         let withdrawer_pubkey = Pubkey::create_with_seed(&base_pubkey, seed, &id()).unwrap();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(Meta::auto(&withdrawer_pubkey)),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -3999,9 +3999,9 @@ mod tests {
     #[test]
     fn test_authorize_override() {
         let withdrawer_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(Meta::auto(&withdrawer_pubkey)),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -4086,9 +4086,9 @@ mod tests {
     #[test]
     fn test_split_source_uninitialized() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Uninitialized,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -4111,7 +4111,7 @@ mod tests {
         // no signers should fail
         assert_eq!(
             stake_keyed_account.split(
-                stake_lamports / 2,
+                stake_carats / 2,
                 &split_stake_keyed_account,
                 &HashSet::default() // no signers
             ),
@@ -4121,22 +4121,22 @@ mod tests {
         // this should work
         let signers = vec![stake_pubkey].into_iter().collect();
         assert_eq!(
-            stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+            stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
             Ok(())
         );
         assert_eq!(
-            stake_keyed_account.account.borrow().lamports(),
-            split_stake_keyed_account.account.borrow().lamports()
+            stake_keyed_account.account.borrow().carats(),
+            split_stake_keyed_account.account.borrow().carats()
         );
     }
 
     #[test]
     fn test_split_split_not_uninitialized() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
-            &StakeState::Stake(Meta::auto(&stake_pubkey), just_stake(stake_lamports)),
+            stake_carats,
+            &StakeState::Stake(Meta::auto(&stake_pubkey), just_stake(stake_carats)),
             std::mem::size_of::<StakeState>(),
             &id(),
         )
@@ -4156,7 +4156,7 @@ mod tests {
         let split_stake_keyed_account =
             KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
         assert_eq!(
-            stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+            stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
             Err(InstructionError::InvalidAccountData)
         );
     }
@@ -4173,12 +4173,12 @@ mod tests {
     #[test]
     fn test_split_more_than_staked() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Stake(
                 Meta::auto(&stake_pubkey),
-                just_stake(stake_lamports / 2 - 1),
+                just_stake(stake_carats / 2 - 1),
             ),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -4199,7 +4199,7 @@ mod tests {
         let split_stake_keyed_account =
             KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
         assert_eq!(
-            stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+            stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
             Err(StakeError::InsufficientStake.into())
         );
     }
@@ -4208,7 +4208,7 @@ mod tests {
     fn test_split_with_rent() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 10_000_000;
+        let stake_carats = 10_000_000;
         let rent_exempt_reserve = 2_282_880;
         let signers = vec![stake_pubkey].into_iter().collect();
 
@@ -4221,10 +4221,10 @@ mod tests {
         // test splitting both an Initialized stake and a Staked stake
         for state in &[
             StakeState::Initialized(meta),
-            StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve)),
+            StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve)),
         ] {
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4257,21 +4257,21 @@ mod tests {
             // doesn't leave enough for initial stake to be non-zero
             assert_eq!(
                 stake_keyed_account.split(
-                    stake_lamports - rent_exempt_reserve,
+                    stake_carats - rent_exempt_reserve,
                     &split_stake_keyed_account,
                     &signers
                 ),
                 Err(InstructionError::InsufficientFunds)
             );
 
-            // split account already has way enough lamports
+            // split account already has way enough carats
             split_stake_keyed_account
                 .account
                 .borrow_mut()
-                .set_lamports(10_000_000);
+                .set_carats(10_000_000);
             assert_eq!(
                 stake_keyed_account.split(
-                    stake_lamports - (rent_exempt_reserve + 1), // leave rent_exempt_reserve + 1 in original account
+                    stake_carats - (rent_exempt_reserve + 1), // leave rent_exempt_reserve + 1 in original account
                     &split_stake_keyed_account,
                     &signers
                 ),
@@ -4286,7 +4286,7 @@ mod tests {
                         *meta,
                         Stake {
                             delegation: Delegation {
-                                stake: stake_lamports - rent_exempt_reserve - 1,
+                                stake: stake_carats - rent_exempt_reserve - 1,
                                 ..stake.delegation
                             },
                             ..*stake
@@ -4294,12 +4294,12 @@ mod tests {
                     ))
                 );
                 assert_eq!(
-                    stake_keyed_account.account.borrow().lamports(),
+                    stake_keyed_account.account.borrow().carats(),
                     rent_exempt_reserve + 1
                 );
                 assert_eq!(
-                    split_stake_keyed_account.account.borrow().lamports(),
-                    10_000_000 + stake_lamports - rent_exempt_reserve - 1
+                    split_stake_keyed_account.account.borrow().carats(),
+                    10_000_000 + stake_carats - rent_exempt_reserve - 1
                 );
             }
         }
@@ -4308,7 +4308,7 @@ mod tests {
     #[test]
     fn test_split() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4316,7 +4316,7 @@ mod tests {
         // test splitting both an Initialized stake and a Staked stake
         for state in &[
             StakeState::Initialized(Meta::auto(&stake_pubkey)),
-            StakeState::Stake(Meta::auto(&stake_pubkey), just_stake(stake_lamports)),
+            StakeState::Stake(Meta::auto(&stake_pubkey), just_stake(stake_carats)),
         ] {
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
                 0,
@@ -4330,7 +4330,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4340,20 +4340,20 @@ mod tests {
 
             // split more than available fails
             assert_eq!(
-                stake_keyed_account.split(stake_lamports + 1, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats + 1, &split_stake_keyed_account, &signers),
                 Err(InstructionError::InsufficientFunds)
             );
 
             // should work
             assert_eq!(
-                stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
                 Ok(())
             );
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
-                stake_lamports
+                stake_keyed_account.account.borrow().carats()
+                    + split_stake_keyed_account.account.borrow().carats(),
+                stake_carats
             );
 
             match state {
@@ -4367,7 +4367,7 @@ mod tests {
                             *meta,
                             Stake {
                                 delegation: Delegation {
-                                    stake: stake_lamports / 2,
+                                    stake: stake_carats / 2,
                                     ..stake.delegation
                                 },
                                 ..*stake
@@ -4380,7 +4380,7 @@ mod tests {
                             *meta,
                             Stake {
                                 delegation: Delegation {
-                                    stake: stake_lamports / 2,
+                                    stake: stake_carats / 2,
                                     ..stake.delegation
                                 },
                                 ..*stake
@@ -4396,14 +4396,14 @@ mod tests {
             stake_keyed_account
                 .account
                 .borrow_mut()
-                .set_lamports(stake_lamports);
+                .set_carats(stake_carats);
         }
     }
 
     #[test]
     fn test_split_fake_stake_dest() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4420,8 +4420,8 @@ mod tests {
             KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
-            &StakeState::Stake(Meta::auto(&stake_pubkey), just_stake(stake_lamports)),
+            stake_carats,
+            &StakeState::Stake(Meta::auto(&stake_pubkey), just_stake(stake_carats)),
             std::mem::size_of::<StakeState>(),
             &id(),
         )
@@ -4429,7 +4429,7 @@ mod tests {
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
         assert_eq!(
-            stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+            stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
             Err(InstructionError::IncorrectProgramId),
         );
     }
@@ -4439,7 +4439,7 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_lamports = rent_exempt_reserve * 3; // Enough to allow half to be split and remain rent-exempt
+        let stake_carats = rent_exempt_reserve * 3; // Enough to allow half to be split and remain rent-exempt
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4450,7 +4450,7 @@ mod tests {
             ..Meta::default()
         };
 
-        let state = StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve));
+        let state = StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve));
         // Test various account prefunding, including empty, less than rent_exempt_reserve, exactly
         // rent_exempt_reserve, and more than rent_exempt_reserve. The empty case is not covered in
         // test_split, since that test uses a Meta with rent_exempt_reserve = 0
@@ -4468,7 +4468,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 &state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4478,31 +4478,31 @@ mod tests {
 
             // split more than available fails
             assert_eq!(
-                stake_keyed_account.split(stake_lamports + 1, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats + 1, &split_stake_keyed_account, &signers),
                 Err(InstructionError::InsufficientFunds)
             );
 
             // should work
             assert_eq!(
-                stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
                 Ok(())
             );
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
-                stake_lamports + initial_balance
+                stake_keyed_account.account.borrow().carats()
+                    + split_stake_keyed_account.account.borrow().carats(),
+                stake_carats + initial_balance
             );
 
             if let StakeState::Stake(meta, stake) = state {
                 let expected_stake =
-                    stake_lamports / 2 - (rent_exempt_reserve.saturating_sub(initial_balance));
+                    stake_carats / 2 - (rent_exempt_reserve.saturating_sub(initial_balance));
                 assert_eq!(
                     Ok(StakeState::Stake(
                         meta,
                         Stake {
                             delegation: Delegation {
-                                stake: stake_lamports / 2
+                                stake: stake_carats / 2
                                     - (rent_exempt_reserve.saturating_sub(initial_balance)),
                                 ..stake.delegation
                             },
@@ -4512,7 +4512,7 @@ mod tests {
                     split_stake_keyed_account.state()
                 );
                 assert_eq!(
-                    split_stake_keyed_account.account.borrow().lamports(),
+                    split_stake_keyed_account.account.borrow().carats(),
                     expected_stake
                         + rent_exempt_reserve
                         + initial_balance.saturating_sub(rent_exempt_reserve)
@@ -4522,7 +4522,7 @@ mod tests {
                         meta,
                         Stake {
                             delegation: Delegation {
-                                stake: stake_lamports / 2 - rent_exempt_reserve,
+                                stake: stake_carats / 2 - rent_exempt_reserve,
                                 ..stake.delegation
                             },
                             ..stake
@@ -4539,7 +4539,7 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_lamports = rent_exempt_reserve * 3; // Enough to allow half to be split and remain rent-exempt
+        let stake_carats = rent_exempt_reserve * 3; // Enough to allow half to be split and remain rent-exempt
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4550,7 +4550,7 @@ mod tests {
             ..Meta::default()
         };
 
-        let state = StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve));
+        let state = StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve));
 
         let expected_rent_exempt_reserve = calculate_split_rent_exempt_reserve(
             meta.rent_exempt_reserve,
@@ -4580,7 +4580,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 &state,
                 std::mem::size_of::<StakeState>() + 100,
                 &id(),
@@ -4590,20 +4590,20 @@ mod tests {
 
             // split more than available fails
             assert_eq!(
-                stake_keyed_account.split(stake_lamports + 1, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats + 1, &split_stake_keyed_account, &signers),
                 Err(InstructionError::InsufficientFunds)
             );
 
             // should work
             assert_eq!(
-                stake_keyed_account.split(stake_lamports / 2, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats / 2, &split_stake_keyed_account, &signers),
                 Ok(())
             );
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
-                stake_lamports + initial_balance
+                stake_keyed_account.account.borrow().carats()
+                    + split_stake_keyed_account.account.borrow().carats(),
+                stake_carats + initial_balance
             );
 
             if let StakeState::Stake(meta, stake) = state {
@@ -4612,7 +4612,7 @@ mod tests {
                     rent_exempt_reserve: expected_rent_exempt_reserve,
                     ..Meta::default()
                 };
-                let expected_stake = stake_lamports / 2
+                let expected_stake = stake_carats / 2
                     - (expected_rent_exempt_reserve.saturating_sub(initial_balance));
 
                 assert_eq!(
@@ -4629,7 +4629,7 @@ mod tests {
                     split_stake_keyed_account.state()
                 );
                 assert_eq!(
-                    split_stake_keyed_account.account.borrow().lamports(),
+                    split_stake_keyed_account.account.borrow().carats(),
                     expected_stake
                         + expected_rent_exempt_reserve
                         + initial_balance.saturating_sub(expected_rent_exempt_reserve)
@@ -4639,7 +4639,7 @@ mod tests {
                         meta,
                         Stake {
                             delegation: Delegation {
-                                stake: stake_lamports / 2 - rent_exempt_reserve,
+                                stake: stake_carats / 2 - rent_exempt_reserve,
                                 ..stake.delegation
                             },
                             ..stake
@@ -4671,10 +4671,10 @@ mod tests {
             std::mem::size_of::<StakeState>() as u64,
             std::mem::size_of::<StakeState>() as u64 + 100,
         );
-        let stake_lamports = expected_rent_exempt_reserve + 1;
-        let split_amount = stake_lamports - (rent_exempt_reserve + 1); // Enough so that split stake is > 0
+        let stake_carats = expected_rent_exempt_reserve + 1;
+        let split_amount = stake_carats - (rent_exempt_reserve + 1); // Enough so that split stake is > 0
 
-        let state = StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve));
+        let state = StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve));
 
         let split_lamport_balances = vec![
             0,
@@ -4695,7 +4695,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 &state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4710,7 +4710,7 @@ mod tests {
 
             // Splitting 100% of source should not make a difference
             let split_result =
-                stake_keyed_account.split(stake_lamports, &split_stake_keyed_account, &signers);
+                stake_keyed_account.split(stake_carats, &split_stake_keyed_account, &signers);
             assert_eq!(split_result, Err(InstructionError::InvalidAccountData));
         }
     }
@@ -4720,7 +4720,7 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_lamports = rent_exempt_reserve * 3; // Arbitrary amount over rent_exempt_reserve
+        let stake_carats = rent_exempt_reserve * 3; // Arbitrary amount over rent_exempt_reserve
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4734,7 +4734,7 @@ mod tests {
         // test splitting both an Initialized stake and a Staked stake
         for state in &[
             StakeState::Initialized(meta),
-            StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve)),
+            StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve)),
         ] {
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
                 0,
@@ -4748,7 +4748,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4758,15 +4758,15 @@ mod tests {
 
             // split 100% over to dest
             assert_eq!(
-                stake_keyed_account.split(stake_lamports, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats, &split_stake_keyed_account, &signers),
                 Ok(())
             );
 
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
-                stake_lamports
+                stake_keyed_account.account.borrow().carats()
+                    + split_stake_keyed_account.account.borrow().carats(),
+                stake_carats
             );
 
             match state {
@@ -4780,7 +4780,7 @@ mod tests {
                             *meta,
                             Stake {
                                 delegation: Delegation {
-                                    stake: stake_lamports - rent_exempt_reserve,
+                                    stake: stake_carats - rent_exempt_reserve,
                                     ..stake.delegation
                                 },
                                 ..*stake
@@ -4797,16 +4797,16 @@ mod tests {
             stake_keyed_account
                 .account
                 .borrow_mut()
-                .set_lamports(stake_lamports);
+                .set_carats(stake_carats);
         }
     }
 
     #[test]
-    fn test_split_100_percent_of_source_to_account_with_lamports() {
+    fn test_split_100_percent_of_source_to_account_with_carats() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_lamports = rent_exempt_reserve * 3; // Arbitrary amount over rent_exempt_reserve
+        let stake_carats = rent_exempt_reserve * 3; // Arbitrary amount over rent_exempt_reserve
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4817,7 +4817,7 @@ mod tests {
             ..Meta::default()
         };
 
-        let state = StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve));
+        let state = StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve));
         // Test various account prefunding, including empty, less than rent_exempt_reserve, exactly
         // rent_exempt_reserve, and more than rent_exempt_reserve. Technically, the empty case is
         // covered in test_split_100_percent_of_source, but included here as well for readability
@@ -4835,7 +4835,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 &state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4845,15 +4845,15 @@ mod tests {
 
             // split 100% over to dest
             assert_eq!(
-                stake_keyed_account.split(stake_lamports, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats, &split_stake_keyed_account, &signers),
                 Ok(())
             );
 
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
-                stake_lamports + initial_balance
+                stake_keyed_account.account.borrow().carats()
+                    + split_stake_keyed_account.account.borrow().carats(),
+                stake_carats + initial_balance
             );
 
             if let StakeState::Stake(meta, stake) = state {
@@ -4862,7 +4862,7 @@ mod tests {
                         meta,
                         Stake {
                             delegation: Delegation {
-                                stake: stake_lamports - rent_exempt_reserve,
+                                stake: stake_carats - rent_exempt_reserve,
                                 ..stake.delegation
                             },
                             ..stake
@@ -4880,7 +4880,7 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_lamports = rent_exempt_reserve + 1;
+        let stake_carats = rent_exempt_reserve + 1;
 
         let split_stake_pubkey = solana_sdk::pubkey::new_rand();
         let signers = vec![stake_pubkey].into_iter().collect();
@@ -4893,7 +4893,7 @@ mod tests {
 
         for state in &[
             StakeState::Initialized(meta),
-            StakeState::Stake(meta, just_stake(stake_lamports - rent_exempt_reserve)),
+            StakeState::Stake(meta, just_stake(stake_carats - rent_exempt_reserve)),
         ] {
             // Test that splitting to a larger account fails
             let split_stake_account = AccountSharedData::new_ref_data_with_space(
@@ -4907,7 +4907,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 &state,
                 std::mem::size_of::<StakeState>(),
                 &id(),
@@ -4916,7 +4916,7 @@ mod tests {
             let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
             assert_eq!(
-                stake_keyed_account.split(stake_lamports, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats, &split_stake_keyed_account, &signers),
                 Err(InstructionError::InvalidAccountData)
             );
 
@@ -4933,7 +4933,7 @@ mod tests {
                 KeyedAccount::new(&split_stake_pubkey, true, &split_stake_account);
 
             let stake_account = AccountSharedData::new_ref_data_with_space(
-                stake_lamports,
+                stake_carats,
                 &state,
                 std::mem::size_of::<StakeState>() + 100,
                 &id(),
@@ -4942,13 +4942,13 @@ mod tests {
             let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
             assert_eq!(
-                stake_keyed_account.split(stake_lamports, &split_stake_keyed_account, &signers),
+                stake_keyed_account.split(stake_carats, &split_stake_keyed_account, &signers),
                 Ok(())
             );
 
             assert_eq!(
-                split_stake_keyed_account.account.borrow().lamports(),
-                stake_lamports
+                split_stake_keyed_account.account.borrow().carats(),
+                stake_carats
             );
 
             let expected_rent_exempt_reserve = calculate_split_rent_exempt_reserve(
@@ -4971,9 +4971,9 @@ mod tests {
                     assert_eq!(Ok(StakeState::Uninitialized), stake_keyed_account.state());
                 }
                 StakeState::Stake(_meta, stake) => {
-                    // Expected stake should reflect original stake amount so that extra lamports
+                    // Expected stake should reflect original stake amount so that extra carats
                     // from the rent_exempt_reserve inequality do not magically activate
-                    let expected_stake = stake_lamports - rent_exempt_reserve;
+                    let expected_stake = stake_carats - rent_exempt_reserve;
 
                     assert_eq!(
                         Ok(StakeState::Stake(
@@ -4989,7 +4989,7 @@ mod tests {
                         split_stake_keyed_account.state()
                     );
                     assert_eq!(
-                        split_stake_keyed_account.account.borrow().lamports(),
+                        split_stake_keyed_account.account.borrow().carats(),
                         expected_stake
                             + expected_rent_exempt_reserve
                             + (rent_exempt_reserve - expected_rent_exempt_reserve)
@@ -5006,21 +5006,21 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let source_stake_pubkey = solana_sdk::pubkey::new_rand();
         let authorized_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
 
         let signers = vec![authorized_pubkey].into_iter().collect();
         let invoke_context = MockInvokeContext::new(vec![]);
 
         for state in &[
             StakeState::Initialized(Meta::auto(&authorized_pubkey)),
-            StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_lamports)),
+            StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_carats)),
         ] {
             for source_state in &[
                 StakeState::Initialized(Meta::auto(&authorized_pubkey)),
-                StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_lamports)),
+                StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_carats)),
             ] {
                 let stake_account = AccountSharedData::new_ref_data_with_space(
-                    stake_lamports,
+                    stake_carats,
                     state,
                     std::mem::size_of::<StakeState>(),
                     &id(),
@@ -5029,7 +5029,7 @@ mod tests {
                 let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
                 let source_stake_account = AccountSharedData::new_ref_data_with_space(
-                    stake_lamports,
+                    stake_carats,
                     source_state,
                     std::mem::size_of::<StakeState>(),
                     &id(),
@@ -5063,12 +5063,12 @@ mod tests {
                     Ok(())
                 );
 
-                // check lamports
+                // check carats
                 assert_eq!(
-                    stake_keyed_account.account.borrow().lamports(),
-                    stake_lamports * 2
+                    stake_keyed_account.account.borrow().carats(),
+                    stake_carats * 2
                 );
-                assert_eq!(source_stake_keyed_account.account.borrow().lamports(), 0);
+                assert_eq!(source_stake_keyed_account.account.borrow().carats(), 0);
 
                 // check state
                 match state {
@@ -5084,7 +5084,7 @@ mod tests {
                                 .stake()
                                 .map(|stake| stake.delegation.stake)
                                 .unwrap_or_else(|| {
-                                    stake_lamports
+                                    stake_carats
                                         - source_state.meta().unwrap().rent_exempt_reserve
                                 });
                         assert_eq!(
@@ -5120,7 +5120,7 @@ mod tests {
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
         let stake_amount = 4242424242;
-        let stake_lamports = rent_exempt_reserve + stake_amount;
+        let stake_carats = rent_exempt_reserve + stake_amount;
 
         let meta = Meta {
             rent_exempt_reserve,
@@ -5135,7 +5135,7 @@ mod tests {
             ..Stake::default()
         };
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Stake(meta, stake),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -5162,7 +5162,7 @@ mod tests {
         let source_stake_pubkey = solana_sdk::pubkey::new_rand();
         let authorized_pubkey = solana_sdk::pubkey::new_rand();
         let wrong_authorized_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
 
         let signers = vec![authorized_pubkey].into_iter().collect();
         let wrong_signers = vec![wrong_authorized_pubkey].into_iter().collect();
@@ -5170,17 +5170,17 @@ mod tests {
 
         for state in &[
             StakeState::Initialized(Meta::auto(&authorized_pubkey)),
-            StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_lamports)),
+            StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_carats)),
         ] {
             for source_state in &[
                 StakeState::Initialized(Meta::auto(&wrong_authorized_pubkey)),
                 StakeState::Stake(
                     Meta::auto(&wrong_authorized_pubkey),
-                    just_stake(stake_lamports),
+                    just_stake(stake_carats),
                 ),
             ] {
                 let stake_account = AccountSharedData::new_ref_data_with_space(
-                    stake_lamports,
+                    stake_carats,
                     state,
                     std::mem::size_of::<StakeState>(),
                     &id(),
@@ -5189,7 +5189,7 @@ mod tests {
                 let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
                 let source_stake_account = AccountSharedData::new_ref_data_with_space(
-                    stake_lamports,
+                    stake_carats,
                     source_state,
                     std::mem::size_of::<StakeState>(),
                     &id(),
@@ -5230,7 +5230,7 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let source_stake_pubkey = solana_sdk::pubkey::new_rand();
         let authorized_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let signers = vec![authorized_pubkey].into_iter().collect();
         let invoke_context = MockInvokeContext::new(vec![]);
 
@@ -5238,11 +5238,11 @@ mod tests {
             StakeState::Uninitialized,
             StakeState::RewardsPool,
             StakeState::Initialized(Meta::auto(&authorized_pubkey)),
-            StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_lamports)),
+            StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_carats)),
         ] {
             for source_state in &[StakeState::Uninitialized, StakeState::RewardsPool] {
                 let stake_account = AccountSharedData::new_ref_data_with_space(
-                    stake_lamports,
+                    stake_carats,
                     state,
                     std::mem::size_of::<StakeState>(),
                     &id(),
@@ -5251,7 +5251,7 @@ mod tests {
                 let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
                 let source_stake_account = AccountSharedData::new_ref_data_with_space(
-                    stake_lamports,
+                    stake_carats,
                     source_state,
                     std::mem::size_of::<StakeState>(),
                     &id(),
@@ -5280,13 +5280,13 @@ mod tests {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
         let source_stake_pubkey = solana_sdk::pubkey::new_rand();
         let authorized_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
 
         let signers = vec![authorized_pubkey].into_iter().collect();
 
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
-            &StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_lamports)),
+            stake_carats,
+            &StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_carats)),
             std::mem::size_of::<StakeState>(),
             &id(),
         )
@@ -5294,8 +5294,8 @@ mod tests {
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
 
         let source_stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
-            &StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_lamports)),
+            stake_carats,
+            &StakeState::Stake(Meta::auto(&authorized_pubkey), just_stake(stake_carats)),
             std::mem::size_of::<StakeState>(),
             &solana_sdk::pubkey::new_rand(),
         )
@@ -5319,17 +5319,17 @@ mod tests {
 
     #[test]
     fn test_merge_active_stake() {
-        let base_lamports = 4242424242;
+        let base_carats = 4242424242;
         let stake_address = Pubkey::new_unique();
         let source_address = Pubkey::new_unique();
         let authority_pubkey = Pubkey::new_unique();
         let signers = HashSet::from_iter(vec![authority_pubkey]);
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_amount = base_lamports;
-        let stake_lamports = rent_exempt_reserve + stake_amount;
-        let source_amount = base_lamports;
-        let source_lamports = rent_exempt_reserve + source_amount;
+        let stake_amount = base_carats;
+        let stake_carats = rent_exempt_reserve + stake_amount;
+        let source_amount = base_carats;
+        let source_carats = rent_exempt_reserve + source_amount;
 
         let meta = Meta {
             rent_exempt_reserve,
@@ -5344,7 +5344,7 @@ mod tests {
             ..Stake::default()
         };
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Stake(meta, stake),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -5362,7 +5362,7 @@ mod tests {
             ..stake
         };
         let source_account = AccountSharedData::new_ref_data_with_space(
-            source_lamports,
+            source_carats,
             &StakeState::Stake(meta, source_stake),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -5375,7 +5375,7 @@ mod tests {
         let invoke_context = MockInvokeContext::new(vec![]);
 
         clock.epoch = 0;
-        let mut effective = base_lamports;
+        let mut effective = base_carats;
         let mut activating = stake_amount;
         let mut deactivating = 0;
         stake_history.add(
@@ -5644,7 +5644,7 @@ mod tests {
     fn test_dbg_stake_minimum_balance() {
         let minimum_balance = Rent::default().minimum_balance(std::mem::size_of::<StakeState>());
         panic!(
-            "stake minimum_balance: {} lamports, {} GEMA",
+            "stake minimum_balance: {} carats, {} GEMA",
             minimum_balance,
             minimum_balance as f64 / solana_sdk::native_token::LAMPORTS_PER_GEMA as f64
         );
@@ -5653,9 +5653,9 @@ mod tests {
     #[test]
     fn test_authorize_delegated_stake() {
         let stake_pubkey = solana_sdk::pubkey::new_rand();
-        let stake_lamports = 42;
+        let stake_carats = 42;
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(Meta::auto(&stake_pubkey)),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -5756,18 +5756,18 @@ mod tests {
 
     #[test]
     fn test_redelegate_consider_balance_changes() {
-        let initial_lamports = 4242424242;
+        let initial_carats = 4242424242;
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
         let withdrawer_pubkey = Pubkey::new_unique();
-        let stake_lamports = rent_exempt_reserve + initial_lamports;
+        let stake_carats = rent_exempt_reserve + initial_carats;
 
         let meta = Meta {
             rent_exempt_reserve,
             ..Meta::auto(&withdrawer_pubkey)
         };
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Initialized(meta),
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -5807,10 +5807,10 @@ mod tests {
         let to = Pubkey::new_unique();
         let to_account = AccountSharedData::new_ref(1, 0, &system_program::id());
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
-        let withdraw_lamports = initial_lamports / 2;
+        let withdraw_carats = initial_carats / 2;
         stake_keyed_account
             .withdraw(
-                withdraw_lamports,
+                withdraw_carats,
                 &to_keyed_account,
                 &clock,
                 &stake_history,
@@ -5819,8 +5819,8 @@ mod tests {
                 true,
             )
             .unwrap();
-        let expected_balance = rent_exempt_reserve + initial_lamports - withdraw_lamports;
-        assert_eq!(stake_keyed_account.lamports().unwrap(), expected_balance);
+        let expected_balance = rent_exempt_reserve + initial_carats - withdraw_carats;
+        assert_eq!(stake_keyed_account.carats().unwrap(), expected_balance);
 
         clock.epoch += 1;
         stake_keyed_account
@@ -5836,7 +5836,7 @@ mod tests {
         let stake = stake_from(&stake_account.borrow()).unwrap();
         assert_eq!(
             stake.delegation.stake,
-            stake_keyed_account.lamports().unwrap() - rent_exempt_reserve,
+            stake_keyed_account.carats().unwrap() - rent_exempt_reserve,
         );
 
         clock.epoch += 1;
@@ -5846,7 +5846,7 @@ mod tests {
         stake_keyed_account
             .try_account_ref_mut()
             .unwrap()
-            .checked_add_lamports(withdraw_lamports)
+            .checked_add_carats(withdraw_carats)
             .unwrap();
 
         clock.epoch += 1;
@@ -5863,7 +5863,7 @@ mod tests {
         let stake = stake_from(&stake_account.borrow()).unwrap();
         assert_eq!(
             stake.delegation.stake,
-            stake_keyed_account.lamports().unwrap() - rent_exempt_reserve,
+            stake_keyed_account.carats().unwrap() - rent_exempt_reserve,
         );
     }
 
@@ -5903,7 +5903,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_lamports_per_byte_year() {
+    fn test_calculate_carats_per_byte_year() {
         let rent = Rent::default();
         let data_len = 200u64;
         let rent_exempt_reserve = rent.minimum_balance(data_len as usize);
@@ -6272,17 +6272,17 @@ mod tests {
     #[test]
     fn test_merge_kind_get_if_mergeable() {
         let authority_pubkey = Pubkey::new_unique();
-        let initial_lamports = 4242424242;
+        let initial_carats = 4242424242;
         let rent = Rent::default();
         let rent_exempt_reserve = rent.minimum_balance(std::mem::size_of::<StakeState>());
-        let stake_lamports = rent_exempt_reserve + initial_lamports;
+        let stake_carats = rent_exempt_reserve + initial_carats;
 
         let meta = Meta {
             rent_exempt_reserve,
             ..Meta::auto(&authority_pubkey)
         };
         let stake_account = AccountSharedData::new_ref_data_with_space(
-            stake_lamports,
+            stake_carats,
             &StakeState::Uninitialized,
             std::mem::size_of::<StakeState>(),
             &id(),
@@ -6332,11 +6332,11 @@ mod tests {
                 &stake_history
             )
             .unwrap(),
-            MergeKind::Inactive(meta, stake_lamports)
+            MergeKind::Inactive(meta, stake_carats)
         );
 
         clock.epoch = 0;
-        let mut effective = 2 * initial_lamports;
+        let mut effective = 2 * initial_carats;
         let mut activating = 0;
         let mut deactivating = 0;
         stake_history.add(
@@ -6349,7 +6349,7 @@ mod tests {
         );
 
         clock.epoch += 1;
-        activating = initial_lamports;
+        activating = initial_carats;
         stake_history.add(
             clock.epoch,
             StakeHistoryEntry {
@@ -6361,7 +6361,7 @@ mod tests {
 
         let stake = Stake {
             delegation: Delegation {
-                stake: initial_lamports,
+                stake: initial_carats,
                 activation_epoch: 1,
                 deactivation_epoch: 5,
                 ..Delegation::default()
@@ -6497,13 +6497,13 @@ mod tests {
                 &stake_history
             )
             .unwrap(),
-            MergeKind::Inactive(meta, stake_lamports),
+            MergeKind::Inactive(meta, stake_carats),
         );
     }
 
     #[test]
     fn test_merge_kind_merge() {
-        let lamports = 424242;
+        let carats = 424242;
         let meta = Meta {
             rent_exempt_reserve: 42,
             ..Meta::default()
@@ -6515,7 +6515,7 @@ mod tests {
             },
             ..Stake::default()
         };
-        let inactive = MergeKind::Inactive(Meta::default(), lamports);
+        let inactive = MergeKind::Inactive(Meta::default(), carats);
         let activation_epoch = MergeKind::ActivationEpoch(meta, stake);
         let fully_active = MergeKind::FullyActive(meta, stake);
         let invoke_context = MockInvokeContext::new(vec![]);
@@ -6557,7 +6557,7 @@ mod tests {
             .unwrap()
             .unwrap();
         let delegation = new_state.delegation().unwrap();
-        assert_eq!(delegation.stake, stake.delegation.stake + lamports);
+        assert_eq!(delegation.stake, stake.delegation.stake + carats);
 
         let new_state = activation_epoch
             .clone()

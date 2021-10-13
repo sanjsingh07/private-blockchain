@@ -233,8 +233,8 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
                                 ic_logger_msg!(logger, "failed to verify account {}: {}", key, err);
                                 err
                             })?;
-                        pre_sum += u128::from(pre_account.lamports());
-                        post_sum += u128::from(account.lamports());
+                        pre_sum += u128::from(pre_account.carats());
+                        post_sum += u128::from(account.carats());
                         if is_writable && !pre_account.executable() {
                             pre_account.update(&account);
                         }
@@ -246,7 +246,7 @@ impl<'a> InvokeContext for ThisInvokeContext<'a> {
         };
         instruction.visit_each_account(&mut work)?;
 
-        // Verify that the total sum of all the lamports did not change
+        // Verify that the total sum of all the carats did not change
         if pre_sum != post_sum {
             return Err(InstructionError::UnbalancedInstruction);
         }
@@ -480,14 +480,14 @@ impl MessageProcessor {
                         );
                         err
                     })?;
-                pre_sum += u128::from(pre_accounts[unique_index].lamports());
-                post_sum += u128::from(account.lamports());
+                pre_sum += u128::from(pre_accounts[unique_index].carats());
+                post_sum += u128::from(account.carats());
                 Ok(())
             };
             instruction.visit_each_account(&mut work)?;
         }
 
-        // Verify that the total sum of all the lamports did not change
+        // Verify that the total sum of all the carats did not change
         if pre_sum != post_sum {
             return Err(InstructionError::UnbalancedInstruction);
         }
@@ -813,7 +813,7 @@ mod tests {
         #[derive(Serialize, Deserialize)]
         enum MockSystemInstruction {
             Correct,
-            AttemptCredit { lamports: u64 },
+            AttemptCredit { carats: u64 },
             AttemptDataChange { data: u8 },
         }
 
@@ -826,15 +826,15 @@ mod tests {
             if let Ok(instruction) = bincode::deserialize(data) {
                 match instruction {
                     MockSystemInstruction::Correct => Ok(()),
-                    MockSystemInstruction::AttemptCredit { lamports } => {
+                    MockSystemInstruction::AttemptCredit { carats } => {
                         keyed_accounts[0]
                             .account
                             .borrow_mut()
-                            .checked_sub_lamports(lamports)?;
+                            .checked_sub_carats(carats)?;
                         keyed_accounts[1]
                             .account
                             .borrow_mut()
-                            .checked_add_lamports(lamports)?;
+                            .checked_add_carats(carats)?;
                         Ok(())
                     }
                     // Change data in a read-only account
@@ -903,13 +903,13 @@ mod tests {
             FeeCalculator::default(),
         );
         assert_eq!(result, Ok(()));
-        assert_eq!(accounts[0].1.borrow().lamports(), 100);
-        assert_eq!(accounts[1].1.borrow().lamports(), 0);
+        assert_eq!(accounts[0].1.borrow().carats(), 100);
+        assert_eq!(accounts[1].1.borrow().carats(), 0);
 
         let message = Message::new(
             &[Instruction::new_with_bincode(
                 mock_system_program_id,
-                &MockSystemInstruction::AttemptCredit { lamports: 50 },
+                &MockSystemInstruction::AttemptCredit { carats: 50 },
                 account_metas.clone(),
             )],
             Some(&accounts[0].0),
@@ -981,7 +981,7 @@ mod tests {
         enum MockSystemInstruction {
             BorrowFail,
             MultiBorrowMut,
-            DoWork { lamports: u64, data: u8 },
+            DoWork { carats: u64, data: u8 },
         }
 
         fn mock_system_process_instruction(
@@ -995,39 +995,39 @@ mod tests {
                     MockSystemInstruction::BorrowFail => {
                         let from_account = keyed_accounts[0].try_account_ref_mut()?;
                         let dup_account = keyed_accounts[2].try_account_ref_mut()?;
-                        if from_account.lamports() != dup_account.lamports() {
+                        if from_account.carats() != dup_account.carats() {
                             return Err(InstructionError::InvalidArgument);
                         }
                         Ok(())
                     }
                     MockSystemInstruction::MultiBorrowMut => {
-                        let from_lamports = {
+                        let from_carats = {
                             let from_account = keyed_accounts[0].try_account_ref_mut()?;
-                            from_account.lamports()
+                            from_account.carats()
                         };
-                        let dup_lamports = {
+                        let dup_carats = {
                             let dup_account = keyed_accounts[2].try_account_ref_mut()?;
-                            dup_account.lamports()
+                            dup_account.carats()
                         };
-                        if from_lamports != dup_lamports {
+                        if from_carats != dup_carats {
                             return Err(InstructionError::InvalidArgument);
                         }
                         Ok(())
                     }
-                    MockSystemInstruction::DoWork { lamports, data } => {
+                    MockSystemInstruction::DoWork { carats, data } => {
                         {
                             let mut to_account = keyed_accounts[1].try_account_ref_mut()?;
                             let mut dup_account = keyed_accounts[2].try_account_ref_mut()?;
-                            dup_account.checked_sub_lamports(lamports)?;
-                            to_account.checked_add_lamports(lamports)?;
+                            dup_account.checked_sub_carats(carats)?;
+                            to_account.checked_add_carats(carats)?;
                             dup_account.set_data(vec![data]);
                         }
                         keyed_accounts[0]
                             .try_account_ref_mut()?
-                            .checked_sub_lamports(lamports)?;
+                            .checked_sub_carats(carats)?;
                         keyed_accounts[1]
                             .try_account_ref_mut()?
-                            .checked_add_lamports(lamports)?;
+                            .checked_add_carats(carats)?;
                         Ok(())
                     }
                 }
@@ -1133,7 +1133,7 @@ mod tests {
             &[Instruction::new_with_bincode(
                 mock_program_id,
                 &MockSystemInstruction::DoWork {
-                    lamports: 10,
+                    carats: 10,
                     data: 42,
                 },
                 account_metas,
@@ -1159,8 +1159,8 @@ mod tests {
             FeeCalculator::default(),
         );
         assert_eq!(result, Ok(()));
-        assert_eq!(accounts[0].1.borrow().lamports(), 80);
-        assert_eq!(accounts[1].1.borrow().lamports(), 20);
+        assert_eq!(accounts[0].1.borrow().carats(), 80);
+        assert_eq!(accounts[1].1.borrow().carats(), 20);
         assert_eq!(accounts[0].1.borrow().data(), &vec![42]);
     }
 

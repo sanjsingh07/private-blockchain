@@ -7,10 +7,10 @@ use crate::{
 };
 use std::cell::RefCell;
 
-pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
+pub fn create_account(carats: u64) -> RefCell<AccountSharedData> {
     RefCell::new(
         AccountSharedData::new_data_with_space(
-            lamports,
+            carats,
             &Versions::new_current(State::Uninitialized),
             State::size(),
             &crate::system_program::id(),

@@ -91,10 +91,10 @@ use solana_sdk::{
     incinerator,
     inflation::Inflation,
     instruction::{CompiledInstruction, InstructionError},
-    lamports::LamportsError,
+    carats::LamportsError,
     message::SanitizedMessage,
     native_loader,
-    native_token::gema_to_lamports,
+    native_token::gema_to_carats,
     nonce, nonce_account,
     packet::PACKET_DATA_SIZE,
     process_instruction::{ComputeMeter, Executor, ProcessInstructionWithContext},
@@ -147,7 +147,7 @@ impl RentDebits {
             if let Some(rent_debit) = rent_debit {
                 let reward_info = RewardInfo {
                     reward_type: RewardType::Rent,
-                    lamports: rent_debit,
+                    carats: rent_debit,
                     post_balance,
                     commission: None, // Not applicable
                 };
@@ -814,8 +814,8 @@ pub trait DropCallback: fmt::Debug {
 #[derive(Debug, PartialEq, Serialize, Deserialize, AbiExample, Clone, Copy)]
 pub struct RewardInfo {
     pub reward_type: RewardType,
-    pub lamports: i64,          // Reward amount
-    pub post_balance: u64,      // Account balance in lamports after `lamports` was applied
+    pub carats: i64,          // Reward amount
+    pub post_balance: u64,      // Account balance in carats after `carats` was applied
     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
 }
 
@@ -1534,7 +1534,7 @@ impl Bank {
         );
         assert_eq!(bank.epoch_schedule, genesis_config.epoch_schedule);
         assert_eq!(bank.epoch, bank.epoch_schedule.get_epoch(bank.slot));
-        bank.fee_rate_governor.lamports_per_signature = bank.fee_calculator.lamports_per_signature;
+        bank.fee_rate_governor.carats_per_signature = bank.fee_calculator.carats_per_signature;
         assert_eq!(
             bank.fee_rate_governor.create_fee_calculator(),
             bank.fee_calculator
@@ -1664,7 +1664,7 @@ impl Bank {
         let mut new_account = updater(&old_account);
 
         if self.rent_for_sysvars() {
-            // When new sysvar comes into existence (with RENT_UNADJUSTED_INITIAL_BALANCE lamports),
+            // When new sysvar comes into existence (with RENT_UNADJUSTED_INITIAL_BALANCE carats),
             // this code ensures that the sysvar's balance is adjusted to be rent-exempt.
             // Note that all of existing sysvar balances must be adjusted immediately (i.e. reset) upon
             // the `rent_for_sysvars` feature activation (ref: reset_all_sysvar_balances).
@@ -1686,7 +1686,7 @@ impl Bank {
         (
             old_account
                 .as_ref()
-                .map(|a| a.lamports())
+                .map(|a| a.carats())
                 .unwrap_or(RENT_UNADJUSTED_INITIAL_BALANCE),
             if !self.rent_for_sysvars() {
                 INITIAL_RENT_EPOCH
@@ -1998,7 +1998,7 @@ impl Bank {
                     .iter()
                     .map(|(_address, reward_info)| {
                         match reward_info.reward_type {
-                            RewardType::Voting | RewardType::Staking => reward_info.lamports,
+                            RewardType::Voting | RewardType::Staking => reward_info.carats,
                             _ => 0,
                         }
                     })
@@ -2138,7 +2138,7 @@ impl Bank {
         // pay according to point value
         for (vote_pubkey, (stake_group, vote_account)) in stake_delegation_accounts.iter_mut() {
             let mut vote_account_changed = false;
-            let voters_account_pre_balance = vote_account.lamports();
+            let voters_account_pre_balance = vote_account.carats();
             let vote_state: VoteState = match StateMut::<VoteStateVersions>::state(vote_account) {
                 Ok(vote_state) => vote_state.convert_to_current(),
                 Err(err) => {
@@ -2179,8 +2179,8 @@ impl Bank {
                             *stake_pubkey,
                             RewardInfo {
                                 reward_type: RewardType::Staking,
-                                lamports: stakers_reward as i64,
-                                post_balance: stake_account.lamports(),
+                                carats: stakers_reward as i64,
+                                post_balance: stake_account.carats(),
                                 commission,
                             },
                         ));
@@ -2194,14 +2194,14 @@ impl Bank {
             }
 
             if vote_account_changed {
-                let post_balance = vote_account.lamports();
-                let lamports = (post_balance - voters_account_pre_balance) as i64;
-                if lamports != 0 {
+                let post_balance = vote_account.carats();
+                let carats = (post_balance - voters_account_pre_balance) as i64;
+                if carats != 0 {
                     rewards.push((
                         *vote_pubkey,
                         RewardInfo {
                             reward_type: RewardType::Voting,
-                            lamports,
+                            carats,
                             post_balance,
                             commission,
                         },
@@ -2310,7 +2310,7 @@ impl Bank {
                             self.collector_id,
                             RewardInfo {
                                 reward_type: RewardType::Fee,
-                                lamports: deposit as i64,
+                                carats: deposit as i64,
                                 post_balance,
                                 commission: None,
                             },
@@ -2322,7 +2322,7 @@ impl Bank {
                         "Burning {} fee instead of crediting {}",
                         deposit, self.collector_id
                     );
-                    inc_new_counter_error!("bank-burned_fee_lamports", deposit as usize);
+                    inc_new_counter_error!("bank-burned_fee_carats", deposit as usize);
                     burn += deposit;
                 }
             }
@@ -2453,7 +2453,7 @@ impl Bank {
                 panic!("{} repeated in genesis config", pubkey);
             }
             self.store_account(pubkey, &AccountSharedData::from(account.clone()));
-            self.capitalization.fetch_add(account.lamports(), Relaxed);
+            self.capitalization.fetch_add(account.carats(), Relaxed);
         }
         // updating sysvars (the fees sysvar in this case) now depends on feature activations in
         // genesis_config.accounts above
@@ -2517,11 +2517,11 @@ impl Bank {
                     // malicious account is pre-occupying at program_id
                     // forcibly burn and purge it
 
-                    self.capitalization.fetch_sub(account.lamports(), Relaxed);
+                    self.capitalization.fetch_sub(account.carats(), Relaxed);
 
                     // Resetting account balance to 0 is needed to really purge from AccountsDb and
                     // flush the Stakes cache
-                    account.set_lamports(0);
+                    account.set_carats(0);
                     self.store_account(program_id, &account);
                     None
                 }
@@ -3760,16 +3760,16 @@ impl Bank {
             })
             .collect::<Vec<(Pubkey, u64)>>();
 
-        // Leftover lamports after fraction calculation, will be paid to validators starting from highest stake
+        // Leftover carats after fraction calculation, will be paid to validators starting from highest stake
         // holder
-        let mut leftover_lamports = rent_to_be_distributed - rent_distributed_in_initial_round;
+        let mut leftover_carats = rent_to_be_distributed - rent_distributed_in_initial_round;
 
         let mut rewards = vec![];
         validator_rent_shares
             .into_iter()
             .for_each(|(pubkey, rent_share)| {
-                let rent_to_be_paid = if leftover_lamports > 0 {
-                    leftover_lamports -= 1;
+                let rent_to_be_paid = if leftover_carats > 0 {
+                    leftover_carats -= 1;
                     rent_share + 1
                 } else {
                     rent_share
@@ -3778,15 +3778,15 @@ impl Bank {
                     let mut account = self
                         .get_account_with_fixed_root(&pubkey)
                         .unwrap_or_default();
-                    if account.checked_add_lamports(rent_to_be_paid).is_err() {
-                        // overflow adding lamports
+                    if account.checked_add_carats(rent_to_be_paid).is_err() {
+                        // overflow adding carats
                         self.capitalization.fetch_sub(rent_to_be_paid, Relaxed);
                         error!(
-                            "Burned {} rent lamports instead of sending to {}",
+                            "Burned {} rent carats instead of sending to {}",
                             rent_to_be_paid, pubkey
                         );
                         inc_new_counter_error!(
-                            "bank-burned_rent_lamports",
+                            "bank-burned_rent_carats",
                             rent_to_be_paid as usize
                         );
                     } else {
@@ -3795,8 +3795,8 @@ impl Bank {
                             pubkey,
                             RewardInfo {
                                 reward_type: RewardType::Rent,
-                                lamports: rent_to_be_paid as i64,
-                                post_balance: account.lamports(),
+                                carats: rent_to_be_paid as i64,
+                                post_balance: account.carats(),
                                 commission: None,
                             },
                         ));
@@ -3806,13 +3806,13 @@ impl Bank {
         self.rewards.write().unwrap().append(&mut rewards);
 
         if enforce_fix {
-            assert_eq!(leftover_lamports, 0);
-        } else if leftover_lamports != 0 {
+            assert_eq!(leftover_carats, 0);
+        } else if leftover_carats != 0 {
             warn!(
                 "There was leftover from rent distribution: {}",
-                leftover_lamports
+                leftover_carats
             );
-            self.capitalization.fetch_sub(leftover_lamports, Relaxed);
+            self.capitalization.fetch_sub(leftover_carats, Relaxed);
         }
     }
 
@@ -3865,7 +3865,7 @@ impl Bank {
         if let Some((account, _)) =
             self.get_account_modified_since_parent_with_fixed_root(&incinerator::id())
         {
-            self.capitalization.fetch_sub(account.lamports(), Relaxed);
+            self.capitalization.fetch_sub(account.carats(), Relaxed);
             self.store_account(&incinerator::id(), &AccountSharedData::default());
         }
     }
@@ -3952,7 +3952,7 @@ impl Bank {
             // ensures we verify the whole on-chain state (= all accounts)
             // via the account delta hash slowly once per an epoch.
             self.store_account(&pubkey, &account);
-            rent_debits.push(&pubkey, rent, account.lamports());
+            rent_debits.push(&pubkey, rent, account.carats());
         }
         self.collected_rent.fetch_add(total_rent, Relaxed);
         self.rewards.write().unwrap().append(&mut rent_debits.0);
@@ -4401,7 +4401,7 @@ impl Bank {
     }
 
     /// Create, sign, and process a Transaction from `keypair` to `to` of
-    /// `n` lamports where `blockhash` is the last Entry ID observed by the client.
+    /// `n` carats where `blockhash` is the last Entry ID observed by the client.
     pub fn transfer(&self, n: u64, keypair: &Keypair, to: &Pubkey) -> Result<Signature> {
         let blockhash = self.last_blockhash();
         let tx = system_transaction::transfer(keypair, to, n, blockhash);
@@ -4410,7 +4410,7 @@ impl Bank {
     }
 
     pub fn read_balance(account: &AccountSharedData) -> u64 {
-        account.lamports()
+        account.carats()
     }
     /// Each program would need to be able to introspect its own state
     /// this is hard-coded to the Budget language
@@ -4480,7 +4480,7 @@ impl Bank {
         self.rc.accounts.accounts_db.expire_old_recycle_stores()
     }
 
-    /// Technically this issues (or even burns!) new lamports,
+    /// Technically this issues (or even burns!) new carats,
     /// so be extra careful for its usage
     fn store_account_and_update_capitalization(
         &self,
@@ -4488,9 +4488,9 @@ impl Bank {
         new_account: &AccountSharedData,
     ) {
         if let Some(old_account) = self.get_account_with_fixed_root(pubkey) {
-            match new_account.lamports().cmp(&old_account.lamports()) {
+            match new_account.carats().cmp(&old_account.carats()) {
                 std::cmp::Ordering::Greater => {
-                    let increased = new_account.lamports() - old_account.lamports();
+                    let increased = new_account.carats() - old_account.carats();
                     trace!(
                         "store_account_and_update_capitalization: increased: {} {}",
                         pubkey,
@@ -4499,7 +4499,7 @@ impl Bank {
                     self.capitalization.fetch_add(increased, Relaxed);
                 }
                 std::cmp::Ordering::Less => {
-                    let decreased = old_account.lamports() - new_account.lamports();
+                    let decreased = old_account.carats() - new_account.carats();
                     trace!(
                         "store_account_and_update_capitalization: decreased: {} {}",
                         pubkey,
@@ -4513,16 +4513,16 @@ impl Bank {
             trace!(
                 "store_account_and_update_capitalization: created: {} {}",
                 pubkey,
-                new_account.lamports()
+                new_account.carats()
             );
             self.capitalization
-                .fetch_add(new_account.lamports(), Relaxed);
+                .fetch_add(new_account.carats(), Relaxed);
         }
 
         self.store_account(pubkey, new_account);
     }
 
-    fn withdraw(&self, pubkey: &Pubkey, lamports: u64) -> Result<()> {
+    fn withdraw(&self, pubkey: &Pubkey, carats: u64) -> Result<()> {
         match self.get_account_with_fixed_root(pubkey) {
             Some(mut account) => {
                 let min_balance = match get_system_account_kind(&account) {
@@ -4533,12 +4533,12 @@ impl Bank {
                     _ => 0,
                 };
 
-                lamports
+                carats
                     .checked_add(min_balance)
-                    .filter(|required_balance| *required_balance <= account.lamports())
+                    .filter(|required_balance| *required_balance <= account.carats())
                     .ok_or(TransactionError::InsufficientFundsForFee)?;
                 account
-                    .checked_sub_lamports(lamports)
+                    .checked_sub_carats(carats)
                     .map_err(|_| TransactionError::InsufficientFundsForFee)?;
                 self.store_account(pubkey, &account);
 
@@ -4551,14 +4551,14 @@ impl Bank {
     pub fn deposit(
         &self,
         pubkey: &Pubkey,
-        lamports: u64,
+        carats: u64,
     ) -> std::result::Result<u64, LamportsError> {
         // This doesn't collect rents intentionally.
         // Rents should only be applied to actual TXes
         let mut account = self.get_account_with_fixed_root(pubkey).unwrap_or_default();
-        account.checked_add_lamports(lamports)?;
+        account.checked_add_carats(carats)?;
         self.store_account(pubkey, &account);
-        Ok(account.lamports())
+        Ok(account.carats())
     }
 
     pub fn accounts(&self) -> Arc<Accounts> {
@@ -4896,7 +4896,7 @@ impl Bank {
     /// snapshot.
     #[must_use]
     fn verify_bank_hash(&self, test_hash_calculation: bool) -> bool {
-        self.rc.accounts.verify_bank_hash_and_lamports(
+        self.rc.accounts.verify_bank_hash_and_carats(
             self.slot(),
             &self.ancestors,
             self.capitalization(),
@@ -5012,7 +5012,7 @@ impl Bank {
         debug_verify: bool,
         slots_per_epoch: Option<Slot>,
     ) -> Hash {
-        let (hash, total_lamports) = self
+        let (hash, total_carats) = self
             .rc
             .accounts
             .accounts_db
@@ -5025,18 +5025,18 @@ impl Bank {
                 false,
                 slots_per_epoch,
             );
-        if total_lamports != self.capitalization() {
+        if total_carats != self.capitalization() {
             datapoint_info!(
                 "capitalization_mismatch",
                 ("slot", self.slot(), i64),
-                ("calculated_lamports", total_lamports, i64),
+                ("calculated_carats", total_carats, i64),
                 ("capitalization", self.capitalization(), i64),
             );
 
             panic!(
-                "capitalization_mismatch. slot: {}, calculated_lamports: {}, capitalization: {}",
+                "capitalization_mismatch. slot: {}, calculated_carats: {}, capitalization: {}",
                 self.slot(),
-                total_lamports,
+                total_carats,
                 self.capitalization()
             );
         }
@@ -5513,15 +5513,15 @@ impl Bank {
             sysvar::stake_history::id(),
         ] {
             if let Some(mut account) = self.get_account(sysvar_id) {
-                let (old_data_len, old_lamports) = (account.data().len(), account.lamports());
+                let (old_data_len, old_carats) = (account.data().len(), account.carats());
                 self.adjust_sysvar_balance_for_rent(&mut account);
                 info!(
                     "reset_all_sysvar_balances (slot: {}): {} ({} bytes) is reset from {} to {}",
                     self.slot(),
                     sysvar_id,
                     old_data_len,
-                    old_lamports,
-                    account.lamports()
+                    old_carats,
+                    account.carats()
                 );
                 self.store_account_and_update_capitalization(sysvar_id, &account);
             }
@@ -5529,9 +5529,9 @@ impl Bank {
     }
 
     fn adjust_sysvar_balance_for_rent(&self, account: &mut AccountSharedData) {
-        account.set_lamports(
+        account.set_carats(
             self.get_minimum_balance_for_rent_exemption(account.data().len())
-                .max(account.lamports()),
+                .max(account.carats()),
         );
     }
 
@@ -5615,9 +5615,9 @@ impl Bank {
                     ("slot", self.slot, i64),
                 );
 
-                // Burn lamports in the old token account
+                // Burn carats in the old token account
                 self.capitalization
-                    .fetch_sub(old_account.lamports(), Relaxed);
+                    .fetch_sub(old_account.carats(), Relaxed);
 
                 // Transfer new token account to old token account
                 self.store_account(&inline_spl_token_v2_0::id(), &new_account);
@@ -5644,7 +5644,7 @@ impl Bank {
             let mut native_mint_account = solana_sdk::account::AccountSharedData::from(Account {
                 owner: inline_spl_token_v2_0::id(),
                 data: inline_spl_token_v2_0::native_mint::ACCOUNT_DATA.to_vec(),
-                lamports: gema_to_lamports(1.),
+                carats: gema_to_carats(1.),
                 executable: false,
                 rent_epoch: self.epoch() + 1,
             });
@@ -5656,14 +5656,14 @@ impl Bank {
                 self.get_account_with_fixed_root(&inline_spl_token_v2_0::native_mint::id())
             {
                 if existing_native_mint_account.owner() == &solana_sdk::system_program::id() {
-                    native_mint_account.set_lamports(existing_native_mint_account.lamports());
+                    native_mint_account.set_carats(existing_native_mint_account.carats());
                     true
                 } else {
                     false
                 }
             } else {
                 self.capitalization
-                    .fetch_add(native_mint_account.lamports(), Relaxed);
+                    .fetch_add(native_mint_account.carats(), Relaxed);
                 true
             };
 
@@ -5690,8 +5690,8 @@ impl Bank {
         if purge_window_epoch {
             for reward_pubkey in self.rewards_pool_pubkeys.iter() {
                 if let Some(mut reward_account) = self.get_account_with_fixed_root(reward_pubkey) {
-                    if reward_account.lamports() == u64::MAX {
-                        reward_account.set_lamports(0);
+                    if reward_account.carats() == u64::MAX {
+                        reward_account.set_carats(0);
                         self.store_account(reward_pubkey, &reward_account);
                         // Adjust capitalization.... it has been wrapping, reducing the real capitalization by 1-lamport
                         self.capitalization.fetch_add(1, Relaxed);
@@ -5769,7 +5769,7 @@ pub(crate) mod tests {
         accounts_index::{AccountIndex, AccountSecondaryIndexes, ScanError, ITER_BATCH_SIZE},
         ancestors::Ancestors,
         genesis_utils::{
-            activate_all_features, bootstrap_validator_stake_lamports,
+            activate_all_features, bootstrap_validator_stake_carats,
             create_genesis_config_with_leader, create_genesis_config_with_vote_accounts,
             GenesisConfigInfo, ValidatorVoteKeypairs,
         },
@@ -5913,30 +5913,30 @@ pub(crate) mod tests {
     #[allow(clippy::float_cmp)]
     fn test_bank_new() {
         let dummy_leader_pubkey = solana_sdk::pubkey::new_rand();
-        let dummy_leader_stake_lamports = bootstrap_validator_stake_lamports();
-        let mint_lamports = 10_000;
+        let dummy_leader_stake_carats = bootstrap_validator_stake_carats();
+        let mint_carats = 10_000;
         let GenesisConfigInfo {
             mut genesis_config,
             mint_keypair,
             voting_keypair,
             ..
         } = create_genesis_config_with_leader(
-            mint_lamports,
+            mint_carats,
             &dummy_leader_pubkey,
-            dummy_leader_stake_lamports,
+            dummy_leader_stake_carats,
         );
 
         genesis_config.rent = Rent {
-            lamports_per_byte_year: 5,
+            carats_per_byte_year: 5,
             exemption_threshold: 1.2,
             burn_percent: 5,
         };
 
         let bank = Bank::new_for_tests(&genesis_config);
-        assert_eq!(bank.get_balance(&mint_keypair.pubkey()), mint_lamports);
+        assert_eq!(bank.get_balance(&mint_keypair.pubkey()), mint_carats);
         assert_eq!(
             bank.get_balance(&voting_keypair.pubkey()),
-            dummy_leader_stake_lamports /* 1 token goes to the vote account associated with dummy_leader_lamports */
+            dummy_leader_stake_carats /* 1 token goes to the vote account associated with dummy_leader_carats */
         );
 
         let rent_account = bank.get_account(&sysvar::rent::id()).unwrap();
@@ -5944,7 +5944,7 @@ pub(crate) mod tests {
 
         assert_eq!(rent.burn_percent, 5);
         assert_eq!(rent.exemption_threshold, 1.2);
-        assert_eq!(rent.lamports_per_byte_year, 5);
+        assert_eq!(rent.carats_per_byte_year, 5);
     }
 
     #[test]
@@ -6060,7 +6060,7 @@ pub(crate) mod tests {
         let keypair6: Keypair = Keypair::new();
 
         genesis_config.rent = Rent {
-            lamports_per_byte_year: 1,
+            carats_per_byte_year: 1,
             exemption_threshold: 21.0,
             burn_percent: 10,
         };
@@ -6114,7 +6114,7 @@ pub(crate) mod tests {
         // Make native instruction loader rent exempt
         let system_program_id = system_program::id();
         let mut system_program_account = bank.get_account(&system_program_id).unwrap();
-        system_program_account.set_lamports(
+        system_program_account.set_carats(
             bank.get_minimum_balance_for_rent_exemption(system_program_account.data().len()),
         );
         bank.store_account(&system_program_id, &system_program_account);
@@ -6172,11 +6172,11 @@ pub(crate) mod tests {
                     keyed_accounts[1]
                         .account
                         .borrow_mut()
-                        .checked_add_lamports(1)?;
+                        .checked_add_carats(1)?;
                     keyed_accounts[2]
                         .account
                         .borrow_mut()
-                        .checked_sub_lamports(1)?;
+                        .checked_sub_carats(1)?;
                     Ok(())
                 }
             }
@@ -6356,26 +6356,26 @@ pub(crate) mod tests {
         let bank = Bank::new_for_tests(&genesis_config);
         let pubkey = solana_sdk::pubkey::new_rand();
 
-        let some_lamports = 400;
-        let account = AccountSharedData::new(some_lamports, 0, &system_program::id());
+        let some_carats = 400;
+        let account = AccountSharedData::new(some_carats, 0, &system_program::id());
 
         assert_capitalization_diff(
             &bank,
             || bank.store_account_and_update_capitalization(&pubkey, &account),
-            |old, new| assert_eq!(old + some_lamports, new),
+            |old, new| assert_eq!(old + some_carats, new),
         );
         assert_eq!(account, bank.get_account(&pubkey).unwrap());
     }
 
     #[test]
     fn test_store_account_and_update_capitalization_increased() {
-        let old_lamports = 400;
-        let (genesis_config, mint_keypair) = create_genesis_config(old_lamports);
+        let old_carats = 400;
+        let (genesis_config, mint_keypair) = create_genesis_config(old_carats);
         let bank = Bank::new_for_tests(&genesis_config);
         let pubkey = mint_keypair.pubkey();
 
-        let new_lamports = 500;
-        let account = AccountSharedData::new(new_lamports, 0, &system_program::id());
+        let new_carats = 500;
+        let account = AccountSharedData::new(new_carats, 0, &system_program::id());
 
         assert_capitalization_diff(
             &bank,
@@ -6387,13 +6387,13 @@ pub(crate) mod tests {
 
     #[test]
     fn test_store_account_and_update_capitalization_decreased() {
-        let old_lamports = 400;
-        let (genesis_config, mint_keypair) = create_genesis_config(old_lamports);
+        let old_carats = 400;
+        let (genesis_config, mint_keypair) = create_genesis_config(old_carats);
         let bank = Bank::new_for_tests(&genesis_config);
         let pubkey = mint_keypair.pubkey();
 
-        let new_lamports = 100;
-        let account = AccountSharedData::new(new_lamports, 0, &system_program::id());
+        let new_carats = 100;
+        let account = AccountSharedData::new(new_carats, 0, &system_program::id());
 
         assert_capitalization_diff(
             &bank,
@@ -6405,12 +6405,12 @@ pub(crate) mod tests {
 
     #[test]
     fn test_store_account_and_update_capitalization_unchanged() {
-        let lamports = 400;
-        let (genesis_config, mint_keypair) = create_genesis_config(lamports);
+        let carats = 400;
+        let (genesis_config, mint_keypair) = create_genesis_config(carats);
         let bank = Bank::new_for_tests(&genesis_config);
         let pubkey = mint_keypair.pubkey();
 
-        let account = AccountSharedData::new(lamports, 1, &system_program::id());
+        let account = AccountSharedData::new(carats, 1, &system_program::id());
 
         assert_capitalization_diff(
             &bank,
@@ -6425,11 +6425,11 @@ pub(crate) mod tests {
         solana_logger::setup();
 
         let bootstrap_validator_pubkey = solana_sdk::pubkey::new_rand();
-        let bootstrap_validator_stake_lamports = 30;
+        let bootstrap_validator_stake_carats = 30;
         let mut genesis_config = create_genesis_config_with_leader(
             10,
             &bootstrap_validator_pubkey,
-            bootstrap_validator_stake_lamports,
+            bootstrap_validator_stake_carats,
         )
         .genesis_config;
 
@@ -6440,7 +6440,7 @@ pub(crate) mod tests {
         );
 
         genesis_config.rent = Rent {
-            lamports_per_byte_year: 1,
+            carats_per_byte_year: 1,
             exemption_threshold: 2.0,
             burn_percent: 10,
         };
@@ -6448,7 +6448,7 @@ pub(crate) mod tests {
         let rent = Rent::free();
 
         let validator_1_pubkey = solana_sdk::pubkey::new_rand();
-        let validator_1_stake_lamports = 20;
+        let validator_1_stake_carats = 20;
         let validator_1_staking_keypair = Keypair::new();
         let validator_1_voting_keypair = Keypair::new();
 
@@ -6456,7 +6456,7 @@ pub(crate) mod tests {
             &validator_1_voting_keypair.pubkey(),
             &validator_1_pubkey,
             0,
-            validator_1_stake_lamports,
+            validator_1_stake_carats,
         );
 
         let validator_1_stake_account = stake_state::create_account(
@@ -6464,7 +6464,7 @@ pub(crate) mod tests {
             &validator_1_voting_keypair.pubkey(),
             &validator_1_vote_account,
             &rent,
-            validator_1_stake_lamports,
+            validator_1_stake_carats,
         );
 
         genesis_config.accounts.insert(
@@ -6481,7 +6481,7 @@ pub(crate) mod tests {
         );
 
         let validator_2_pubkey = solana_sdk::pubkey::new_rand();
-        let validator_2_stake_lamports = 20;
+        let validator_2_stake_carats = 20;
         let validator_2_staking_keypair = Keypair::new();
         let validator_2_voting_keypair = Keypair::new();
 
@@ -6489,7 +6489,7 @@ pub(crate) mod tests {
             &validator_2_voting_keypair.pubkey(),
             &validator_2_pubkey,
             0,
-            validator_2_stake_lamports,
+            validator_2_stake_carats,
         );
 
         let validator_2_stake_account = stake_state::create_account(
@@ -6497,7 +6497,7 @@ pub(crate) mod tests {
             &validator_2_voting_keypair.pubkey(),
             &validator_2_vote_account,
             &rent,
-            validator_2_stake_lamports,
+            validator_2_stake_carats,
         );
 
         genesis_config.accounts.insert(
@@ -6514,7 +6514,7 @@ pub(crate) mod tests {
         );
 
         let validator_3_pubkey = solana_sdk::pubkey::new_rand();
-        let validator_3_stake_lamports = 30;
+        let validator_3_stake_carats = 30;
         let validator_3_staking_keypair = Keypair::new();
         let validator_3_voting_keypair = Keypair::new();
 
@@ -6522,7 +6522,7 @@ pub(crate) mod tests {
             &validator_3_voting_keypair.pubkey(),
             &validator_3_pubkey,
             0,
-            validator_3_stake_lamports,
+            validator_3_stake_carats,
         );
 
         let validator_3_stake_account = stake_state::create_account(
@@ -6530,7 +6530,7 @@ pub(crate) mod tests {
             &validator_3_voting_keypair.pubkey(),
             &validator_3_vote_account,
             &rent,
-            validator_3_stake_lamports,
+            validator_3_stake_carats,
         );
 
         genesis_config.accounts.insert(
@@ -6547,7 +6547,7 @@ pub(crate) mod tests {
         );
 
         genesis_config.rent = Rent {
-            lamports_per_byte_year: 1,
+            carats_per_byte_year: 1,
             exemption_threshold: 10.0,
             burn_percent: 10,
         };
@@ -6593,7 +6593,7 @@ pub(crate) mod tests {
         let rent_to_be_distributed = total_rent_deducted - burned_portion;
 
         let bootstrap_validator_portion =
-            ((bootstrap_validator_stake_lamports * rent_to_be_distributed) as f64 / 100.0) as u64
+            ((bootstrap_validator_stake_carats * rent_to_be_distributed) as f64 / 100.0) as u64
                 + 1; // Leftover lamport
         assert_eq!(
             bank.get_balance(&bootstrap_validator_pubkey),
@@ -6608,7 +6608,7 @@ pub(crate) mod tests {
             0
         };
         let validator_1_portion =
-            ((validator_1_stake_lamports * rent_to_be_distributed) as f64 / 100.0) as u64 + tweak_1;
+            ((validator_1_stake_carats * rent_to_be_distributed) as f64 / 100.0) as u64 + tweak_1;
         assert_eq!(
             bank.get_balance(&validator_1_pubkey),
             validator_1_portion + 42 - tweak_1,
@@ -6622,14 +6622,14 @@ pub(crate) mod tests {
             0
         };
         let validator_2_portion =
-            ((validator_2_stake_lamports * rent_to_be_distributed) as f64 / 100.0) as u64 + tweak_2;
+            ((validator_2_stake_carats * rent_to_be_distributed) as f64 / 100.0) as u64 + tweak_2;
         assert_eq!(
             bank.get_balance(&validator_2_pubkey),
             validator_2_portion + 42 - tweak_2,
         );
 
         let validator_3_portion =
-            ((validator_3_stake_lamports * rent_to_be_distributed) as f64 / 100.0) as u64 + 1;
+            ((validator_3_stake_carats * rent_to_be_distributed) as f64 / 100.0) as u64 + 1;
         assert_eq!(
             bank.get_balance(&validator_3_pubkey),
             validator_3_portion + 42
@@ -6654,14 +6654,14 @@ pub(crate) mod tests {
                 .unwrap()
                 .iter()
                 .map(|(address, reward)| {
-                    if reward.lamports > 0 {
+                    if reward.carats > 0 {
                         assert_eq!(reward.reward_type, RewardType::Rent);
                         if *address == validator_2_pubkey {
                             assert_eq!(reward.post_balance, validator_2_portion + 42 - tweak_2);
                         } else if *address == validator_3_pubkey {
                             assert_eq!(reward.post_balance, validator_3_portion + 42);
                         }
-                        reward.lamports as u64
+                        reward.carats as u64
                     } else {
                         0
                     }
@@ -6684,12 +6684,12 @@ pub(crate) mod tests {
                 .genesis_config;
 
         let bank = Bank::new_for_tests(&genesis_config);
-        let old_validator_lamports = bank.get_balance(&validator_pubkey);
+        let old_validator_carats = bank.get_balance(&validator_pubkey);
         bank.distribute_rent_to_validators(&bank.vote_accounts(), RENT_TO_BE_DISTRIBUTED);
-        let new_validator_lamports = bank.get_balance(&validator_pubkey);
+        let new_validator_carats = bank.get_balance(&validator_pubkey);
         assert_eq!(
-            new_validator_lamports,
-            old_validator_lamports + RENT_TO_BE_DISTRIBUTED
+            new_validator_carats,
+            old_validator_carats + RENT_TO_BE_DISTRIBUTED
         );
 
         genesis_config
@@ -6697,17 +6697,17 @@ pub(crate) mod tests {
             .remove(&feature_set::no_overflow_rent_distribution::id())
             .unwrap();
         let bank = std::panic::AssertUnwindSafe(Bank::new_for_tests(&genesis_config));
-        let old_validator_lamports = bank.get_balance(&validator_pubkey);
-        let new_validator_lamports = std::panic::catch_unwind(|| {
+        let old_validator_carats = bank.get_balance(&validator_pubkey);
+        let new_validator_carats = std::panic::catch_unwind(|| {
             bank.distribute_rent_to_validators(&bank.vote_accounts(), RENT_TO_BE_DISTRIBUTED);
             bank.get_balance(&validator_pubkey)
         });
 
-        if let Ok(new_validator_lamports) = new_validator_lamports {
+        if let Ok(new_validator_carats) = new_validator_carats {
             info!("asserting overflowing incorrect rent distribution");
             assert_ne!(
-                new_validator_lamports,
-                old_validator_lamports + RENT_TO_BE_DISTRIBUTED
+                new_validator_carats,
+                old_validator_carats + RENT_TO_BE_DISTRIBUTED
             );
         } else {
             info!("NOT-asserting overflowing incorrect rent distribution");
@@ -6718,7 +6718,7 @@ pub(crate) mod tests {
     fn test_rent_exempt_executable_account() {
         let (mut genesis_config, mint_keypair) = create_genesis_config(100_000);
         genesis_config.rent = Rent {
-            lamports_per_byte_year: 1,
+            carats_per_byte_year: 1,
             exemption_threshold: 1000.0,
             burn_percent: 10,
         };
@@ -6737,11 +6737,11 @@ pub(crate) mod tests {
         account.set_executable(true);
         bank.store_account(&account_pubkey, &account);
 
-        let transfer_lamports = 1;
+        let transfer_carats = 1;
         let tx = system_transaction::transfer(
             &mint_keypair,
             &account_pubkey,
-            transfer_lamports,
+            transfer_carats,
             genesis_config.hash(),
         );
 
@@ -6768,7 +6768,7 @@ pub(crate) mod tests {
         }
 
         genesis_config.rent = Rent {
-            lamports_per_byte_year: 1,
+            carats_per_byte_year: 1,
             exemption_threshold: 1000.0,
             burn_percent: 10,
         };
@@ -6907,7 +6907,7 @@ pub(crate) mod tests {
         // account data is blank now
         assert_eq!(account10.data().len(), 0);
         // 10 - 10(Rent) + 929(Transfer) - magic_rent_number(Rent)
-        assert_eq!(account10.lamports(), 929 - magic_rent_number);
+        assert_eq!(account10.carats(), 929 - magic_rent_number);
         rent_collected += magic_rent_number + 10;
 
         // 48993 - generic_rent_due_for_system_account(Rent)
@@ -6996,9 +6996,9 @@ pub(crate) mod tests {
     #[allow(clippy::cognitive_complexity)]
     fn test_rent_eager_across_epoch_without_gap_under_multi_epoch_cycle() {
         let leader_pubkey = solana_sdk::pubkey::new_rand();
-        let leader_lamports = 3;
+        let leader_carats = 3;
         let mut genesis_config =
-            create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
+            create_genesis_config_with_leader(5, &leader_pubkey, leader_carats).genesis_config;
         genesis_config.cluster_type = ClusterType::MainnetBeta;
 
         const SLOTS_PER_EPOCH: u64 = MINIMUM_SLOTS_PER_EPOCH as u64;
@@ -7066,9 +7066,9 @@ pub(crate) mod tests {
     #[test]
     fn test_rent_eager_across_epoch_with_gap_under_multi_epoch_cycle() {
         let leader_pubkey = solana_sdk::pubkey::new_rand();
-        let leader_lamports = 3;
+        let leader_carats = 3;
         let mut genesis_config =
-            create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
+            create_genesis_config_with_leader(5, &leader_pubkey, leader_carats).genesis_config;
         genesis_config.cluster_type = ClusterType::MainnetBeta;
 
         const SLOTS_PER_EPOCH: u64 = MINIMUM_SLOTS_PER_EPOCH as u64;
@@ -7124,9 +7124,9 @@ pub(crate) mod tests {
     #[test]
     fn test_rent_eager_with_warmup_epochs_under_multi_epoch_cycle() {
         let leader_pubkey = solana_sdk::pubkey::new_rand();
-        let leader_lamports = 3;
+        let leader_carats = 3;
         let mut genesis_config =
-            create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
+            create_genesis_config_with_leader(5, &leader_pubkey, leader_carats).genesis_config;
         genesis_config.cluster_type = ClusterType::MainnetBeta;
 
         const SLOTS_PER_EPOCH: u64 = MINIMUM_SLOTS_PER_EPOCH as u64 * 8;
@@ -7181,9 +7181,9 @@ pub(crate) mod tests {
     fn test_rent_eager_under_fixed_cycle_for_development() {
         solana_logger::setup();
         let leader_pubkey = solana_sdk::pubkey::new_rand();
-        let leader_lamports = 3;
+        let leader_carats = 3;
         let mut genesis_config =
-            create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
+            create_genesis_config_with_leader(5, &leader_pubkey, leader_carats).genesis_config;
 
         const SLOTS_PER_EPOCH: u64 = MINIMUM_SLOTS_PER_EPOCH as u64 * 8;
         const LEADER_SCHEDULE_SLOT_OFFSET: u64 = SLOTS_PER_EPOCH * 3 - 3;
@@ -7571,22 +7571,22 @@ pub(crate) mod tests {
         let rent_exempt_pubkey = solana_sdk::pubkey::new_rand();
 
         let mut bank = Arc::new(Bank::new_for_tests(&genesis_config));
-        let zero_lamports = 0;
-        let little_lamports = 1234;
-        let large_lamports = 123_456_789;
+        let zero_carats = 0;
+        let little_carats = 1234;
+        let large_carats = 123_456_789;
         let rent_collected = 22;
 
         bank.store_account(
             &zero_lamport_pubkey,
-            &AccountSharedData::new(zero_lamports, 0, &Pubkey::default()),
+            &AccountSharedData::new(zero_carats, 0, &Pubkey::default()),
         );
         bank.store_account(
             &rent_due_pubkey,
-            &AccountSharedData::new(little_lamports, 0, &Pubkey::default()),
+            &AccountSharedData::new(little_carats, 0, &Pubkey::default()),
         );
         bank.store_account(
             &rent_exempt_pubkey,
-            &AccountSharedData::new(large_lamports, 0, &Pubkey::default()),
+            &AccountSharedData::new(large_carats, 0, &Pubkey::default()),
         );
 
         let genesis_slot = 0;
@@ -7597,8 +7597,8 @@ pub(crate) mod tests {
 
         assert_eq!(bank.collected_rent.load(Relaxed), 0);
         assert_eq!(
-            bank.get_account(&rent_due_pubkey).unwrap().lamports(),
-            little_lamports
+            bank.get_account(&rent_due_pubkey).unwrap().carats(),
+            little_carats
         );
         assert_eq!(bank.get_account(&rent_due_pubkey).unwrap().rent_epoch(), 0);
         assert_eq!(
@@ -7619,13 +7619,13 @@ pub(crate) mod tests {
         // unrelated 1-lamport accounts exists
         assert_eq!(bank.collected_rent.load(Relaxed), rent_collected + 2);
         assert_eq!(
-            bank.get_account(&rent_due_pubkey).unwrap().lamports(),
-            little_lamports - rent_collected
+            bank.get_account(&rent_due_pubkey).unwrap().carats(),
+            little_carats - rent_collected
         );
         assert_eq!(bank.get_account(&rent_due_pubkey).unwrap().rent_epoch(), 6);
         assert_eq!(
-            bank.get_account(&rent_exempt_pubkey).unwrap().lamports(),
-            large_lamports
+            bank.get_account(&rent_exempt_pubkey).unwrap().carats(),
+            large_carats
         );
         assert_eq!(
             bank.get_account(&rent_exempt_pubkey).unwrap().rent_epoch(),
@@ -7657,9 +7657,9 @@ pub(crate) mod tests {
         let genesis_bank2 = Arc::new(Bank::new_for_tests(&genesis_config));
         let bank1_with_zero = Arc::new(new_from_parent(&genesis_bank1));
         let bank1_without_zero = Arc::new(new_from_parent(&genesis_bank2));
-        let zero_lamports = 0;
+        let zero_carats = 0;
 
-        let account = AccountSharedData::new(zero_lamports, 0, &Pubkey::default());
+        let account = AccountSharedData::new(zero_carats, 0, &Pubkey::default());
         bank1_with_zero.store_account(&zero_lamport_pubkey, &account);
         bank1_without_zero.store_account(&zero_lamport_pubkey, &account);
 
@@ -7802,8 +7802,8 @@ pub(crate) mod tests {
 
         // verify the stake and vote accounts are the right size
         assert!(
-            ((bank1.get_balance(&stake_id) - stake_account.lamports() + bank1.get_balance(&vote_id)
-                - vote_account.lamports()) as f64
+            ((bank1.get_balance(&stake_id) - stake_account.carats() + bank1.get_balance(&vote_id)
+                - vote_account.carats()) as f64
                 - rewards.validator_point_value * validator_points as f64)
                 .abs()
                 < 1.0
@@ -7820,7 +7820,7 @@ pub(crate) mod tests {
                 stake_id,
                 RewardInfo {
                     reward_type: RewardType::Staking,
-                    lamports: (rewards.validator_point_value * validator_points as f64) as i64,
+                    carats: (rewards.validator_point_value * validator_points as f64) as i64,
                     post_balance: bank1.get_balance(&stake_id),
                     commission: Some(0),
                 }
@@ -7935,7 +7935,7 @@ pub(crate) mod tests {
         }
     }
 
-    // Test that purging 0 lamports accounts works.
+    // Test that purging 0 carats accounts works.
     #[test]
     fn test_purge_empty_accounts() {
         solana_logger::setup();
@@ -7971,7 +7971,7 @@ pub(crate) mod tests {
         let tx = system_transaction::transfer(&keypair, &pubkey, 10, blockhash);
         bank1.process_transaction(&tx).unwrap();
 
-        assert_eq!(bank0.get_account(&keypair.pubkey()).unwrap().lamports(), 10);
+        assert_eq!(bank0.get_account(&keypair.pubkey()).unwrap().carats(), 10);
         assert_eq!(bank1.get_account(&keypair.pubkey()), None);
 
         info!("bank0 purge");
@@ -7979,13 +7979,13 @@ pub(crate) mod tests {
         bank0.clean_accounts(false, false, None);
         assert_eq!(bank0.update_accounts_hash(), hash);
 
-        assert_eq!(bank0.get_account(&keypair.pubkey()).unwrap().lamports(), 10);
+        assert_eq!(bank0.get_account(&keypair.pubkey()).unwrap().carats(), 10);
         assert_eq!(bank1.get_account(&keypair.pubkey()), None);
 
         info!("bank1 purge");
         bank1.clean_accounts(false, false, None);
 
-        assert_eq!(bank0.get_account(&keypair.pubkey()).unwrap().lamports(), 10);
+        assert_eq!(bank0.get_account(&keypair.pubkey()).unwrap().carats(), 10);
         assert_eq!(bank1.get_account(&keypair.pubkey()), None);
 
         assert!(bank0.verify_bank_hash(true));
@@ -8107,7 +8107,7 @@ pub(crate) mod tests {
             ))
         );
 
-        // The lamports didn't move, but the from address paid the transaction fee.
+        // The carats didn't move, but the from address paid the transaction fee.
         assert_eq!(bank.get_balance(&dest.pubkey()), 0);
 
         // This should be the original balance minus the transaction fee.
@@ -8227,7 +8227,7 @@ pub(crate) mod tests {
     #[test]
     fn test_bank_withdraw_from_nonce_account() {
         let (mut genesis_config, _mint_keypair) = create_genesis_config(100_000);
-        genesis_config.rent.lamports_per_byte_year = 42;
+        genesis_config.rent.carats_per_byte_year = 42;
         let bank = Bank::new_for_tests(&genesis_config);
 
         let min_balance = bank.get_minimum_balance_for_rent_exemption(nonce::State::size());
@@ -8278,7 +8278,7 @@ pub(crate) mod tests {
         let expected_fee_paid = genesis_config
             .fee_rate_governor
             .create_fee_calculator()
-            .lamports_per_signature;
+            .carats_per_signature;
         let (expected_fee_collected, expected_fee_burned) =
             genesis_config.fee_rate_governor.burn(expected_fee_paid);
 
@@ -8323,7 +8323,7 @@ pub(crate) mod tests {
                 leader,
                 RewardInfo {
                     reward_type: RewardType::Fee,
-                    lamports: expected_fee_collected as i64,
+                    carats: expected_fee_collected as i64,
                     post_balance: initial_balance + expected_fee_collected,
                     commission: None,
                 }
@@ -8347,7 +8347,7 @@ pub(crate) mod tests {
         goto_end_of_slot(&mut bank);
         assert_eq!(bank.signature_count(), 1);
 
-        // Profit! 2 transaction signatures processed at 3 lamports each
+        // Profit! 2 transaction signatures processed at 3 carats each
         assert_eq!(
             bank.get_balance(&leader),
             initial_balance + 2 * expected_fee_collected
@@ -8359,7 +8359,7 @@ pub(crate) mod tests {
                 leader,
                 RewardInfo {
                     reward_type: RewardType::Fee,
-                    lamports: expected_fee_collected as i64,
+                    carats: expected_fee_collected as i64,
                     post_balance: initial_balance + 2 * expected_fee_collected,
                     commission: None,
                 }
@@ -8379,14 +8379,14 @@ pub(crate) mod tests {
         } = create_genesis_config_with_leader(1_000_000, &leader, 3);
         genesis_config
             .fee_rate_governor
-            .target_lamports_per_signature = 1000;
+            .target_carats_per_signature = 1000;
         genesis_config.fee_rate_governor.target_signatures_per_slot = 1;
 
         let mut bank = Bank::new_for_tests(&genesis_config);
         goto_end_of_slot(&mut bank);
         #[allow(deprecated)]
         let (cheap_blockhash, cheap_fee_calculator) = bank.last_blockhash_with_fee_calculator();
-        assert_eq!(cheap_fee_calculator.lamports_per_signature, 0);
+        assert_eq!(cheap_fee_calculator.carats_per_signature, 0);
 
         let mut bank = Bank::new_from_parent(&Arc::new(bank), &leader, 1);
         goto_end_of_slot(&mut bank);
@@ -8394,8 +8394,8 @@ pub(crate) mod tests {
         let (expensive_blockhash, expensive_fee_calculator) =
             bank.last_blockhash_with_fee_calculator();
         assert!(
-            cheap_fee_calculator.lamports_per_signature
-                < expensive_fee_calculator.lamports_per_signature
+            cheap_fee_calculator.carats_per_signature
+                < expensive_fee_calculator.carats_per_signature
         );
 
         let bank = Bank::new_from_parent(&Arc::new(bank), &leader, 2);
@@ -8408,7 +8408,7 @@ pub(crate) mod tests {
         assert_eq!(bank.get_balance(&key.pubkey()), 1);
         assert_eq!(
             bank.get_balance(&mint_keypair.pubkey()),
-            initial_mint_balance - 1 - cheap_fee_calculator.lamports_per_signature
+            initial_mint_balance - 1 - cheap_fee_calculator.carats_per_signature
         );
 
         // Send a transfer using expensive_blockhash
@@ -8419,7 +8419,7 @@ pub(crate) mod tests {
         assert_eq!(bank.get_balance(&key.pubkey()), 1);
         assert_eq!(
             bank.get_balance(&mint_keypair.pubkey()),
-            initial_mint_balance - 1 - expensive_fee_calculator.lamports_per_signature
+            initial_mint_balance - 1 - expensive_fee_calculator.carats_per_signature
         );
     }
 
@@ -8463,7 +8463,7 @@ pub(crate) mod tests {
             initial_balance
                 + bank
                     .fee_rate_governor
-                    .burn(bank.fee_calculator.lamports_per_signature * 2)
+                    .burn(bank.fee_calculator.carats_per_signature * 2)
                     .0
         );
         assert_eq!(results[0], Ok(()));
@@ -9101,7 +9101,7 @@ pub(crate) mod tests {
         let result = bank1.get_account_modified_since_parent_with_fixed_root(&pubkey);
         assert!(result.is_some());
         let (account, slot) = result.unwrap();
-        assert_eq!(account.lamports(), 1);
+        assert_eq!(account.carats(), 1);
         assert_eq!(slot, 0);
 
         let bank2 = Arc::new(Bank::new_from_parent(&bank1, &Pubkey::default(), 1));
@@ -9112,12 +9112,12 @@ pub(crate) mod tests {
         let result = bank1.get_account_modified_since_parent_with_fixed_root(&pubkey);
         assert!(result.is_some());
         let (account, slot) = result.unwrap();
-        assert_eq!(account.lamports(), 1);
+        assert_eq!(account.carats(), 1);
         assert_eq!(slot, 0);
         let result = bank2.get_account_modified_since_parent_with_fixed_root(&pubkey);
         assert!(result.is_some());
         let (account, slot) = result.unwrap();
-        assert_eq!(account.lamports(), 101);
+        assert_eq!(account.carats(), 101);
         assert_eq!(slot, 1);
 
         bank1.squash();
@@ -9267,9 +9267,9 @@ pub(crate) mod tests {
     #[test]
     fn test_bank_epoch_vote_accounts() {
         let leader_pubkey = solana_sdk::pubkey::new_rand();
-        let leader_lamports = 3;
+        let leader_carats = 3;
         let mut genesis_config =
-            create_genesis_config_with_leader(5, &leader_pubkey, leader_lamports).genesis_config;
+            create_genesis_config_with_leader(5, &leader_pubkey, leader_carats).genesis_config;
 
         // set this up weird, forces future generation, odd mod(), etc.
         //  this says: "vote_accounts for epoch X should be generated at slot index 3 in epoch X-2...
@@ -9305,7 +9305,7 @@ pub(crate) mod tests {
 
         let leader_stake = Stake {
             delegation: Delegation {
-                stake: leader_lamports,
+                stake: leader_carats,
                 activation_epoch: std::u64::MAX, // bootstrap
                 ..Delegation::default()
             },
@@ -9372,7 +9372,7 @@ pub(crate) mod tests {
         solana_logger::setup();
         let (genesis_config, mint_keypair) = create_genesis_config(500);
         let mut bank = Bank::new_for_tests(&genesis_config);
-        bank.fee_calculator.lamports_per_signature = 2;
+        bank.fee_calculator.carats_per_signature = 2;
         let key = Keypair::new();
 
         let mut transfer_instruction =
@@ -9489,16 +9489,16 @@ pub(crate) mod tests {
         let (mut genesis_config, _mint_keypair) = create_genesis_config(500);
         genesis_config
             .fee_rate_governor
-            .target_lamports_per_signature = 123;
+            .target_carats_per_signature = 123;
 
         let bank0 = Arc::new(Bank::new_for_tests(&genesis_config));
         let bank1 = Arc::new(new_from_parent(&bank0));
         assert_eq!(
-            bank0.fee_rate_governor.target_lamports_per_signature / 2,
+            bank0.fee_rate_governor.target_carats_per_signature / 2,
             bank1
                 .fee_rate_governor
                 .create_fee_calculator()
-                .lamports_per_signature
+                .carats_per_signature
         );
     }
 
@@ -9610,10 +9610,10 @@ pub(crate) mod tests {
         let fees_account = bank.get_account(&sysvar::fees::id()).unwrap();
         let fees = from_account::<Fees, _>(&fees_account).unwrap();
         assert_eq!(
-            bank.fee_calculator.lamports_per_signature,
-            fees.fee_calculator.lamports_per_signature
+            bank.fee_calculator.carats_per_signature,
+            fees.fee_calculator.carats_per_signature
         );
-        assert_eq!(fees.fee_calculator.lamports_per_signature, 12345);
+        assert_eq!(fees.fee_calculator.carats_per_signature, 12345);
     }
 
     #[test]
@@ -9701,7 +9701,7 @@ pub(crate) mod tests {
         let pubkey1 = solana_sdk::pubkey::new_rand();
         let account1 = AccountSharedData::new(3, 0, &program_id);
         bank2.store_account(&pubkey1, &account1);
-        // Accounts with 0 lamports should be filtered out by Accounts::load_by_program()
+        // Accounts with 0 carats should be filtered out by Accounts::load_by_program()
         let pubkey2 = solana_sdk::pubkey::new_rand();
         let account2 = AccountSharedData::new(0, 0, &program_id);
         bank2.store_account(&pubkey2, &account2);
@@ -9922,7 +9922,7 @@ pub(crate) mod tests {
         let ((vote_id, vote_account), (stake_id, stake_account)) =
             crate::stakes::tests::create_staked_node_accounts(1_0000);
         bank.capitalization
-            .fetch_add(vote_account.lamports() + stake_account.lamports(), Relaxed);
+            .fetch_add(vote_account.carats() + stake_account.carats(), Relaxed);
         bank.store_account(&vote_id, &vote_account);
         bank.store_account(&stake_id, &stake_account);
         {
@@ -10121,8 +10121,8 @@ pub(crate) mod tests {
     fn nonce_setup(
         bank: &mut Arc<Bank>,
         mint_keypair: &Keypair,
-        custodian_lamports: u64,
-        nonce_lamports: u64,
+        custodian_carats: u64,
+        nonce_carats: u64,
         nonce_authority: Option<Pubkey>,
     ) -> Result<(Keypair, Keypair)> {
         let custodian_keypair = Keypair::new();
@@ -10131,14 +10131,14 @@ pub(crate) mod tests {
         let mut setup_ixs = vec![system_instruction::transfer(
             &mint_keypair.pubkey(),
             &custodian_keypair.pubkey(),
-            custodian_lamports,
+            custodian_carats,
         )];
         let nonce_authority = nonce_authority.unwrap_or_else(|| nonce_keypair.pubkey());
         setup_ixs.extend_from_slice(&system_instruction::create_nonce_account(
             &custodian_keypair.pubkey(),
             &nonce_keypair.pubkey(),
             &nonce_authority,
-            nonce_lamports,
+            nonce_carats,
         ));
         let message = Message::new(&setup_ixs, Some(&mint_keypair.pubkey()));
         let setup_tx = Transaction::new(
@@ -10151,17 +10151,17 @@ pub(crate) mod tests {
     }
 
     fn setup_nonce_with_bank<F>(
-        supply_lamports: u64,
+        supply_carats: u64,
         mut genesis_cfg_fn: F,
-        custodian_lamports: u64,
-        nonce_lamports: u64,
+        custodian_carats: u64,
+        nonce_carats: u64,
         nonce_authority: Option<Pubkey>,
     ) -> Result<(Arc<Bank>, Keypair, Keypair, Keypair)>
     where
         F: FnMut(&mut GenesisConfig),
     {
-        let (mut genesis_config, mint_keypair) = create_genesis_config(supply_lamports);
-        genesis_config.rent.lamports_per_byte_year = 0;
+        let (mut genesis_config, mint_keypair) = create_genesis_config(supply_carats);
+        genesis_config.rent.carats_per_byte_year = 0;
         genesis_cfg_fn(&mut genesis_config);
         let mut bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
@@ -10175,8 +10175,8 @@ pub(crate) mod tests {
         let (custodian_keypair, nonce_keypair) = nonce_setup(
             &mut bank,
             &mint_keypair,
-            custodian_lamports,
-            nonce_lamports,
+            custodian_carats,
+            nonce_carats,
             nonce_authority,
         )?;
         Ok((bank, mint_keypair, custodian_keypair, nonce_keypair))
@@ -10483,7 +10483,7 @@ pub(crate) mod tests {
             nonce_hash,
         );
         debug!("{:?}", durable_tx);
-        let initial_custodian_balance = custodian_account.lamports();
+        let initial_custodian_balance = custodian_account.carats();
         assert_eq!(
             bank.process_transaction(&durable_tx),
             Err(TransactionError::InstructionError(
@@ -10563,7 +10563,7 @@ pub(crate) mod tests {
     #[test]
     fn test_nonce_fee_calculator_updates() {
         let (mut genesis_config, mint_keypair) = create_genesis_config(1_000_000);
-        genesis_config.rent.lamports_per_byte_year = 0;
+        genesis_config.rent.carats_per_byte_year = 0;
         let mut bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
         // Deliberately use bank 0 to initialize nonce account, so that nonce account fee_calculator indicates 0 fees
@@ -10750,19 +10750,19 @@ pub(crate) mod tests {
             invoke_context: &mut dyn InvokeContext,
         ) -> result::Result<(), InstructionError> {
             let keyed_accounts = invoke_context.get_keyed_accounts()?;
-            let lamports = data[0] as u64;
+            let carats = data[0] as u64;
             {
                 let mut to_account = keyed_accounts[1].try_account_ref_mut()?;
                 let mut dup_account = keyed_accounts[2].try_account_ref_mut()?;
-                dup_account.checked_sub_lamports(lamports)?;
-                to_account.checked_add_lamports(lamports)?;
+                dup_account.checked_sub_carats(carats)?;
+                to_account.checked_add_carats(carats)?;
             }
             keyed_accounts[0]
                 .try_account_ref_mut()?
-                .checked_sub_lamports(lamports)?;
+                .checked_sub_carats(carats)?;
             keyed_accounts[1]
                 .try_account_ref_mut()?
-                .checked_add_lamports(lamports)?;
+                .checked_add_carats(carats)?;
             Ok(())
         }
 
@@ -11056,16 +11056,16 @@ pub(crate) mod tests {
             .map(|_| {
                 let key = solana_sdk::pubkey::new_rand();
                 let balance = if thread_rng().gen_ratio(9, 10) {
-                    let lamports = if thread_rng().gen_ratio(1, 5) {
+                    let carats = if thread_rng().gen_ratio(1, 5) {
                         thread_rng().gen_range(0, 10)
                     } else {
                         thread_rng().gen_range(20, 100)
                     };
                     let space = thread_rng().gen_range(0, 10);
                     let owner = Pubkey::default();
-                    let account = AccountSharedData::new(lamports, space, &owner);
+                    let account = AccountSharedData::new(carats, space, &owner);
                     bank.store_account(&key, &account);
-                    lamports
+                    carats
                 } else {
                     0
                 };
@@ -11244,9 +11244,9 @@ pub(crate) mod tests {
             invoke_context: &mut dyn InvokeContext,
         ) -> result::Result<(), InstructionError> {
             let keyed_accounts = invoke_context.get_keyed_accounts()?;
-            assert_eq!(42, keyed_accounts[0].lamports().unwrap());
+            assert_eq!(42, keyed_accounts[0].carats().unwrap());
             let mut account = keyed_accounts[0].try_account_ref_mut()?;
-            account.checked_add_lamports(1)?;
+            account.checked_add_carats(1)?;
             Ok(())
         }
 
@@ -11334,20 +11334,20 @@ pub(crate) mod tests {
         // slots add updates to the cache
         bank0.force_flush_accounts_cache();
 
-        // Store some lamports in bank 1
-        let some_lamports = 123;
+        // Store some carats in bank 1
+        let some_carats = 123;
         let mut bank1 = Arc::new(Bank::new_from_parent(&bank0, &Pubkey::default(), 1));
-        bank1.deposit(&pubkey0, some_lamports).unwrap();
+        bank1.deposit(&pubkey0, some_carats).unwrap();
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank1).unwrap());
         bank1.freeze();
         bank1.flush_accounts_cache_slot();
 
         bank1.print_accounts_stats();
 
-        // Store some lamports for pubkey1 in bank 2, root bank 2
+        // Store some carats for pubkey1 in bank 2, root bank 2
         // bank2's parent is bank0
         let mut bank2 = Arc::new(Bank::new_from_parent(&bank0, &Pubkey::default(), 2));
-        bank2.deposit(&pubkey1, some_lamports).unwrap();
+        bank2.deposit(&pubkey1, some_carats).unwrap();
         bank2.store_account(&pubkey0, &account_zero);
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank2).unwrap());
         bank2.freeze();
@@ -11362,7 +11362,7 @@ pub(crate) mod tests {
         bank2.clean_accounts(false, false, None);
 
         let mut bank3 = Arc::new(Bank::new_from_parent(&bank2, &Pubkey::default(), 3));
-        bank3.deposit(&pubkey1, some_lamports + 1).unwrap();
+        bank3.deposit(&pubkey1, some_carats + 1).unwrap();
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank3).unwrap());
         bank3.freeze();
         bank3.squash();
@@ -11414,11 +11414,11 @@ pub(crate) mod tests {
         // slots add updates to the cache
         bank0.force_flush_accounts_cache();
 
-        // Store some lamports in bank 1
-        let some_lamports = 123;
+        // Store some carats in bank 1
+        let some_carats = 123;
         let mut bank1 = Arc::new(new_from_parent(&bank0));
-        bank1.deposit(&pubkey1, some_lamports).unwrap();
-        bank1.deposit(&pubkey2, some_lamports).unwrap();
+        bank1.deposit(&pubkey1, some_carats).unwrap();
+        bank1.deposit(&pubkey2, some_carats).unwrap();
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank1).unwrap());
         bank1.freeze();
         bank1.squash();
@@ -11426,9 +11426,9 @@ pub(crate) mod tests {
         // slots add updates to the cache
         bank1.force_flush_accounts_cache();
 
-        // Store some lamports for pubkey1 in bank 2, root bank 2
+        // Store some carats for pubkey1 in bank 2, root bank 2
         let mut bank2 = Arc::new(new_from_parent(&bank1));
-        bank2.deposit(&pubkey1, some_lamports).unwrap();
+        bank2.deposit(&pubkey1, some_carats).unwrap();
         bank2.store_account(&pubkey0, &account0);
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank2).unwrap());
         bank2.freeze();
@@ -11480,15 +11480,15 @@ pub(crate) mod tests {
 
         bank.squash();
 
-        let some_lamports = 123;
+        let some_carats = 123;
         let mut bank = Arc::new(new_from_parent(&bank));
-        bank.deposit(&pubkey1, some_lamports).unwrap();
-        bank.deposit(&pubkey2, some_lamports).unwrap();
+        bank.deposit(&pubkey1, some_carats).unwrap();
+        bank.deposit(&pubkey2, some_carats).unwrap();
 
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank).unwrap());
 
         let mut bank = Arc::new(new_from_parent(&bank));
-        bank.deposit(&pubkey1, some_lamports).unwrap();
+        bank.deposit(&pubkey1, some_carats).unwrap();
 
         goto_end_of_slot(Arc::<Bank>::get_mut(&mut bank).unwrap());
 
@@ -12222,7 +12222,7 @@ pub(crate) mod tests {
         bank.store_account_and_update_capitalization(
             &inline_spl_token_v2_0::id(),
             &AccountSharedData::from(Account {
-                lamports: 100,
+                carats: 100,
                 ..Account::default()
             }),
         );
@@ -12230,7 +12230,7 @@ pub(crate) mod tests {
 
         // Setup new token account
         let new_token_account = AccountSharedData::from(Account {
-            lamports: 123,
+            carats: 123,
             ..Account::default()
         });
         bank.store_account_and_update_capitalization(
@@ -12258,7 +12258,7 @@ pub(crate) mod tests {
             Some(new_token_account)
         );
 
-        // Lamports in the old token account were burnt
+        // Carats in the old token account were burnt
         assert_eq!(bank.capitalization(), original_capitalization - 100);
     }
 
@@ -12296,10 +12296,10 @@ pub(crate) mod tests {
         let (genesis_config, _mint_keypair) = create_genesis_config(0);
         let bank = Bank::new_for_tests(&genesis_config);
         let mut smaller_sample_sysvar = bank.get_account(&sysvar::clock::id()).unwrap();
-        assert_eq!(smaller_sample_sysvar.lamports(), 1);
+        assert_eq!(smaller_sample_sysvar.carats(), 1);
         bank.adjust_sysvar_balance_for_rent(&mut smaller_sample_sysvar);
         assert_eq!(
-            smaller_sample_sysvar.lamports(),
+            smaller_sample_sysvar.carats(),
             bank.get_minimum_balance_for_rent_exemption(smaller_sample_sysvar.data().len()),
         );
 
@@ -12309,13 +12309,13 @@ pub(crate) mod tests {
             &Pubkey::default(),
         );
         bank.adjust_sysvar_balance_for_rent(&mut bigger_sample_sysvar);
-        assert!(smaller_sample_sysvar.lamports() < bigger_sample_sysvar.lamports());
+        assert!(smaller_sample_sysvar.carats() < bigger_sample_sysvar.carats());
 
-        // excess lamports shouldn't be reduced by adjust_sysvar_balance_for_rent()
-        let excess_lamports = smaller_sample_sysvar.lamports() + 999;
-        smaller_sample_sysvar.set_lamports(excess_lamports);
+        // excess carats shouldn't be reduced by adjust_sysvar_balance_for_rent()
+        let excess_carats = smaller_sample_sysvar.carats() + 999;
+        smaller_sample_sysvar.set_carats(excess_carats);
         bank.adjust_sysvar_balance_for_rent(&mut smaller_sample_sysvar);
-        assert_eq!(smaller_sample_sysvar.lamports(), excess_lamports);
+        assert_eq!(smaller_sample_sysvar.carats(), excess_carats);
     }
 
     // this test can be removed after rent_for_sysvars activation on mainnet-beta
@@ -12386,8 +12386,8 @@ pub(crate) mod tests {
             assert_eq!(sysvars.len(), 8);
             assert!(sysvars
                 .iter()
-                .map(|(_pubkey, account)| account.lamports())
-                .all(|lamports| lamports == 1));
+                .map(|(_pubkey, account)| account.carats())
+                .all(|carats| carats == 1));
         }
 
         // 8 sysvars should be reset by reset_all_sysvar_balances()
@@ -12421,8 +12421,8 @@ pub(crate) mod tests {
             assert_eq!(sysvars.len(), 8);
             assert!(sysvars
                 .iter()
-                .map(|(_pubkey, account)| account.lamports())
-                .all(|lamports| lamports > 1));
+                .map(|(_pubkey, account)| account.carats())
+                .all(|carats| carats > 1));
         }
     }
 
@@ -12498,8 +12498,8 @@ pub(crate) mod tests {
             assert_eq!(sysvars.len(), 9);
             assert!(sysvars
                 .iter()
-                .map(|(_pubkey, account)| account.lamports())
-                .all(|lamports| lamports == 1));
+                .map(|(_pubkey, account)| account.carats())
+                .all(|carats| carats == 1));
         }
 
         // 9 sysvars should be reset by reset_all_sysvar_balances()
@@ -12533,8 +12533,8 @@ pub(crate) mod tests {
             assert_eq!(sysvars.len(), 9);
             assert!(sysvars
                 .iter()
-                .map(|(_pubkey, account)| account.lamports())
-                .all(|lamports| lamports > 1));
+                .map(|(_pubkey, account)| account.carats())
+                .all(|carats| carats > 1));
         }
     }
 
@@ -12911,8 +12911,8 @@ pub(crate) mod tests {
             .take(total_pubkeys)
             .collect();
         let program_id = system_program::id();
-        let starting_lamports = 1;
-        let starting_account = AccountSharedData::new(starting_lamports, 0, &program_id);
+        let starting_carats = 1;
+        let starting_account = AccountSharedData::new(starting_carats, 0, &program_id);
 
         // Write accounts to the store
         for key in &all_pubkeys {
@@ -12984,17 +12984,17 @@ pub(crate) mod tests {
                             // account state at some frozen slot `X` (no partial updates).
                             if let Ok(accounts) = accounts_result {
                                 assert!(!accounts.is_empty());
-                                let mut expected_lamports = None;
+                                let mut expected_carats = None;
                                 let mut target_accounts_found = HashSet::new();
                                 for (pubkey, account) in accounts {
-                                    let account_balance = account.lamports();
+                                    let account_balance = account.carats();
                                     if pubkeys_to_modify_.contains(&pubkey) {
                                         target_accounts_found.insert(pubkey);
-                                        if let Some(expected_lamports) = expected_lamports {
-                                            assert_eq!(account_balance, expected_lamports);
+                                        if let Some(expected_carats) = expected_carats {
+                                            assert_eq!(account_balance, expected_carats);
                                         } else {
                                             // All pubkeys in the specified set should have the same balance
-                                            expected_lamports = Some(account_balance);
+                                            expected_carats = Some(account_balance);
                                         }
                                     }
                                 }
@@ -13020,7 +13020,7 @@ pub(crate) mod tests {
                     scan_finished_receiver,
                     pubkeys_to_modify,
                     program_id,
-                    starting_lamports,
+                    starting_carats,
                 );
             })
             .unwrap();
@@ -13061,12 +13061,12 @@ pub(crate) mod tests {
                       _scan_finished_receiver,
                       pubkeys_to_modify,
                       program_id,
-                      starting_lamports| {
+                      starting_carats| {
                     let mut current_major_fork_bank = bank0;
                     loop {
                         let mut current_minor_fork_bank = current_major_fork_bank.clone();
                         let num_new_banks = 2;
-                        let lamports = current_minor_fork_bank.slot() + starting_lamports + 1;
+                        let carats = current_minor_fork_bank.slot() + starting_carats + 1;
                         // Modify banks on the two banks on the minor fork
                         for pubkeys_to_modify in &pubkeys_to_modify
                             .iter()
@@ -13077,7 +13077,7 @@ pub(crate) mod tests {
                                 &solana_sdk::pubkey::new_rand(),
                                 current_minor_fork_bank.slot() + 2,
                             ));
-                            let account = AccountSharedData::new(lamports, 0, &program_id);
+                            let account = AccountSharedData::new(carats, 0, &program_id);
                             // Write partial updates to each of the banks in the minor fork so if any of them
                             // get cleaned up, there will be keys with the wrong account value/missing.
                             for key in pubkeys_to_modify {
@@ -13102,8 +13102,8 @@ pub(crate) mod tests {
                             &solana_sdk::pubkey::new_rand(),
                             current_minor_fork_bank.slot() - 1,
                         ));
-                        let lamports = current_major_fork_bank.slot() + starting_lamports + 1;
-                        let account = AccountSharedData::new(lamports, 0, &program_id);
+                        let carats = current_major_fork_bank.slot() + starting_carats + 1;
+                        let account = AccountSharedData::new(carats, 0, &program_id);
                         for key in pubkeys_to_modify.iter() {
                             // Store rooted updates to these pubkeys such that the minor
                             // fork updates to the same keys will be deleted by clean
@@ -13158,12 +13158,12 @@ pub(crate) mod tests {
                  _scan_finished_receiver,
                  pubkeys_to_modify,
                  program_id,
-                 starting_lamports| {
+                 starting_carats| {
                     let mut current_bank = bank0.clone();
                     let mut prev_bank = bank0;
                     loop {
-                        let lamports_this_round = current_bank.slot() + starting_lamports + 1;
-                        let account = AccountSharedData::new(lamports_this_round, 0, &program_id);
+                        let carats_this_round = current_bank.slot() + starting_carats + 1;
+                        let account = AccountSharedData::new(carats_this_round, 0, &program_id);
                         for key in pubkeys_to_modify.iter() {
                             current_bank.store_account(key, &account);
                         }
@@ -13202,7 +13202,7 @@ pub(crate) mod tests {
         bank0: Arc<Bank>,
         pubkeys_to_modify: Arc<HashSet<Pubkey>>,
         program_id: &Pubkey,
-        starting_lamports: u64,
+        starting_carats: u64,
         num_banks_on_fork: usize,
         step_size: usize,
     ) -> (Arc<Bank>, Vec<(Slot, BankId)>, Ancestors) {
@@ -13225,18 +13225,18 @@ pub(crate) mod tests {
         let pubkeys_to_modify: Vec<Pubkey> = pubkeys_to_modify.iter().cloned().collect();
         let pubkeys_to_modify_per_slot = (pubkeys_to_modify.len() / step_size).max(1);
         for _ in (0..num_banks_on_fork).step_by(step_size) {
-            let mut lamports_this_round = 0;
+            let mut carats_this_round = 0;
             for i in 0..step_size {
                 bank_at_fork_tip = Arc::new(Bank::new_from_parent(
                     &bank_at_fork_tip,
                     &solana_sdk::pubkey::new_rand(),
                     bank_at_fork_tip.slot() + 1,
                 ));
-                if lamports_this_round == 0 {
-                    lamports_this_round = bank_at_fork_tip.bank_id() + starting_lamports + 1;
+                if carats_this_round == 0 {
+                    carats_this_round = bank_at_fork_tip.bank_id() + starting_carats + 1;
                 }
                 let pubkey_to_modify_starting_index = i * pubkeys_to_modify_per_slot;
-                let account = AccountSharedData::new(lamports_this_round, 0, program_id);
+                let account = AccountSharedData::new(carats_this_round, 0, program_id);
                 for pubkey_index_to_modify in pubkey_to_modify_starting_index
                     ..pubkey_to_modify_starting_index + pubkeys_to_modify_per_slot
                 {
@@ -13264,14 +13264,14 @@ pub(crate) mod tests {
                  scan_finished_receiver,
                  pubkeys_to_modify,
                  program_id,
-                 starting_lamports| {
+                 starting_carats| {
                     loop {
                         let (bank_at_fork_tip, slots_on_fork, ancestors) =
                             setup_banks_on_fork_to_remove(
                                 bank0.clone(),
                                 pubkeys_to_modify.clone(),
                                 &program_id,
-                                starting_lamports,
+                                starting_carats,
                                 10,
                                 2,
                             );
@@ -13315,7 +13315,7 @@ pub(crate) mod tests {
                  scan_finished_receiver,
                  pubkeys_to_modify,
                  program_id,
-                 starting_lamports| {
+                 starting_carats| {
                     let mut prev_bank = bank0.clone();
                     loop {
                         let start = Instant::now();
@@ -13324,7 +13324,7 @@ pub(crate) mod tests {
                                 bank0.clone(),
                                 pubkeys_to_modify.clone(),
                                 &program_id,
-                                starting_lamports,
+                                starting_carats,
                                 10,
                                 2,
                             );
@@ -13381,7 +13381,7 @@ pub(crate) mod tests {
                  scan_finished_receiver,
                  pubkeys_to_modify,
                  program_id,
-                 starting_lamports| {
+                 starting_carats| {
                     loop {
                         let step_size = 2;
                         let (bank_at_fork_tip, slots_on_fork, ancestors) =
@@ -13389,7 +13389,7 @@ pub(crate) mod tests {
                                 bank0.clone(),
                                 pubkeys_to_modify.clone(),
                                 &program_id,
-                                starting_lamports,
+                                starting_carats,
                                 10,
                                 step_size,
                             );
@@ -13703,8 +13703,8 @@ pub(crate) mod tests {
         let mut vote_account = bank
             .get_account(&validator_vote_keypairs0.vote_keypair.pubkey())
             .unwrap_or_default();
-        let original_lamports = vote_account.lamports();
-        vote_account.set_lamports(0);
+        let original_carats = vote_account.carats();
+        vote_account.set_carats(0);
         // Simulate vote account removal via full withdrawal
         bank.store_account(
             &validator_vote_keypairs0.vote_keypair.pubkey(),
@@ -13714,7 +13714,7 @@ pub(crate) mod tests {
         // Modify staked vote account owner; a vote account owned by another program could be
         // freely modified with malicious data
         let bogus_vote_program = Pubkey::new_unique();
-        vote_account.set_lamports(original_lamports);
+        vote_account.set_carats(original_carats);
         vote_account.set_owner(bogus_vote_program);
         bank.store_account(
             &validator_vote_keypairs0.vote_keypair.pubkey(),
@@ -13749,7 +13749,7 @@ pub(crate) mod tests {
         } = create_genesis_config_with_leader(
             1_000_000_000_000_000,
             &Pubkey::new_unique(),
-            bootstrap_validator_stake_lamports(),
+            bootstrap_validator_stake_carats(),
         );
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
@@ -13817,7 +13817,7 @@ pub(crate) mod tests {
         } = create_genesis_config_with_leader(
             1_000_000_000_000_000,
             &Pubkey::new_unique(),
-            bootstrap_validator_stake_lamports(),
+            bootstrap_validator_stake_carats(),
         );
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         *bank.transaction_log_collector_config.write().unwrap() = TransactionLogCollectorConfig {
@@ -13888,11 +13888,11 @@ pub(crate) mod tests {
             .iter()
             .cloned()
             .zip(vec![
-                gema_to_lamports(2.0),
-                gema_to_lamports(3.0),
-                gema_to_lamports(3.0),
-                gema_to_lamports(4.0),
-                gema_to_lamports(5.0),
+                gema_to_carats(2.0),
+                gema_to_carats(3.0),
+                gema_to_carats(3.0),
+                gema_to_carats(4.0),
+                gema_to_carats(5.0),
             ])
             .collect();
 
@@ -13918,17 +13918,17 @@ pub(crate) mod tests {
         assert_eq!(
             bank.get_largest_accounts(1, &pubkeys_hashset, AccountAddressFilter::Include)
                 .unwrap(),
-            vec![(pubkeys[4], gema_to_lamports(5.0))]
+            vec![(pubkeys[4], gema_to_carats(5.0))]
         );
         assert_eq!(
             bank.get_largest_accounts(1, &HashSet::new(), AccountAddressFilter::Exclude)
                 .unwrap(),
-            vec![(pubkeys[4], gema_to_lamports(5.0))]
+            vec![(pubkeys[4], gema_to_carats(5.0))]
         );
         assert_eq!(
             bank.get_largest_accounts(1, &exclude4, AccountAddressFilter::Exclude)
                 .unwrap(),
-            vec![(pubkeys[3], gema_to_lamports(4.0))]
+            vec![(pubkeys[3], gema_to_carats(4.0))]
         );
 
         // Return all added accounts
@@ -13997,7 +13997,7 @@ pub(crate) mod tests {
         } = create_genesis_config_with_leader(
             1_000_000_000_000_000,
             &Pubkey::new_unique(),
-            bootstrap_validator_stake_lamports(),
+            bootstrap_validator_stake_carats(),
         );
         let mut bank = Bank::new_for_tests(&genesis_config);
 
@@ -14020,7 +14020,7 @@ pub(crate) mod tests {
         #[allow(deprecated)]
         let blockhash_sysvar = sysvar::clock::id();
         #[allow(deprecated)]
-        let orig_lamports = bank.get_account(&sysvar::clock::id()).unwrap().lamports();
+        let orig_carats = bank.get_account(&sysvar::clock::id()).unwrap().carats();
         info!("{:?}", bank.get_account(&sysvar::clock::id()));
         let tx = system_transaction::transfer(&mint_keypair, &blockhash_sysvar, 10, blockhash);
         assert_eq!(
@@ -14031,8 +14031,8 @@ pub(crate) mod tests {
             ))
         );
         assert_eq!(
-            bank.get_account(&sysvar::clock::id()).unwrap().lamports(),
-            orig_lamports
+            bank.get_account(&sysvar::clock::id()).unwrap().carats(),
+            orig_carats
         );
         info!("{:?}", bank.get_account(&sysvar::clock::id()));
 
@@ -14088,9 +14088,9 @@ pub(crate) mod tests {
         //!     - In this case, key1 should be cleaned up
         //! 2. A key is written in both an unrooted _and_ rooted bank (key3)
         //!     - In this case, key3's ref-count should be decremented correctly
-        //! 3. A key with zero lamports is _only_ in an unrooted bank (key4)
+        //! 3. A key with zero carats is _only_ in an unrooted bank (key4)
         //!     - In this case, key4 should be cleaned up
-        //! 4. A key with zero lamports is in both an unrooted _and_ rooted bank (key5)
+        //! 4. A key with zero carats is in both an unrooted _and_ rooted bank (key5)
         //!     - In this case, key5's ref-count should be decremented correctly
 
         let (genesis_config, mint_keypair) = create_genesis_config(100);
@@ -14102,8 +14102,8 @@ pub(crate) mod tests {
         let key1 = Keypair::new(); // only touched in bank1
         let key2 = Keypair::new(); // only touched in bank2
         let key3 = Keypair::new(); // touched in both bank1 and bank2
-        let key4 = Keypair::new(); // in only bank1, and has zero lamports
-        let key5 = Keypair::new(); // in both bank1 and bank2, and has zero lamports
+        let key4 = Keypair::new(); // in only bank1, and has zero carats
+        let key5 = Keypair::new(); // in both bank1 and bank2, and has zero carats
         bank0.transfer(2, &mint_keypair, &key2.pubkey()).unwrap();
         bank0.freeze();
 
@@ -14206,7 +14206,7 @@ pub(crate) mod tests {
         } = create_genesis_config_with_leader(
             1_000_000_000_000_000,
             &Pubkey::new_unique(),
-            bootstrap_validator_stake_lamports(),
+            bootstrap_validator_stake_carats(),
         );
         let mut bank = Bank::new_for_tests(&genesis_config);
 
