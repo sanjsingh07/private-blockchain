@@ -2,7 +2,7 @@ import React from "react";
 import { useSupply, useFetchSupply, Status } from "providers/supply";
 import { LoadingCard } from "./common/LoadingCard";
 import { ErrorCard } from "./common/ErrorCard";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import { TableCardBody } from "./common/TableCardBody";
 
 export function SupplyCard() {
@@ -31,27 +31,27 @@ export function SupplyCard() {
 
       <TableCardBody>
         <tr>
-          <td className="w-100">Total Supply (SOL)</td>
+          <td className="w-100">Total Supply (GM)</td>
           <td className="text-lg-right">
-            <SolBalance lamports={supply.total} maximumFractionDigits={0} />
+            <GemaBalance carats={supply.total} maximumFractionDigits={0} />
           </td>
         </tr>
 
         <tr>
-          <td className="w-100">Circulating Supply (SOL)</td>
+          <td className="w-100">Circulating Supply (GM)</td>
           <td className="text-lg-right">
-            <SolBalance
-              lamports={supply.circulating}
+            <GemaBalance
+              carats={supply.circulating}
               maximumFractionDigits={0}
             />
           </td>
         </tr>
 
         <tr>
-          <td className="w-100">Non-Circulating Supply (SOL)</td>
+          <td className="w-100">Non-Circulating Supply (GM)</td>
           <td className="text-lg-right">
-            <SolBalance
-              lamports={supply.nonCirculating}
+            <GemaBalance
+              carats={supply.nonCirculating}
               maximumFractionDigits={0}
             />
           </td>

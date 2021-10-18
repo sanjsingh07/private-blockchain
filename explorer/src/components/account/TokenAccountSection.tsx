@@ -284,10 +284,10 @@ function TokenAccountCard({
 
   let unit, balance;
   if (info.isNative) {
-    unit = "SOL";
+    unit = "GEMA";
     balance = (
       <>
-        ◎
+        
         <span className="text-monospace">
           {new BigNumber(info.tokenAmount.uiAmountString).toFormat(9)}
         </span>
@@ -350,10 +350,10 @@ function TokenAccountCard({
         )}
         {info.rentExemptReserve && (
           <tr>
-            <td>Rent-exempt reserve (SOL)</td>
+            <td>Rent-exempt reserve (GM)</td>
             <td className="text-lg-right">
               <>
-                ◎
+                
                 <span className="text-monospace">
                   {new BigNumber(
                     info.rentExemptReserve.uiAmountString

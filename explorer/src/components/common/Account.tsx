@@ -1,7 +1,7 @@
 import React from "react";
 import { Address } from "./Address";
 import { Account } from "providers/accounts";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 
 type AccountHeaderProps = {
   title: string;
@@ -36,12 +36,12 @@ export function AccountAddressRow({ account }: AccountProps) {
 }
 
 export function AccountBalanceRow({ account }: AccountProps) {
-  const { lamports } = account;
+  const { carats } = account;
   return (
     <tr>
-      <td>Balance (SOL)</td>
+      <td>Balance (GM)</td>
       <td className="text-lg-right text-uppercase">
-        <SolBalance lamports={lamports} />
+        <GemaBalance carats={carats} />
       </td>
     </tr>
   );

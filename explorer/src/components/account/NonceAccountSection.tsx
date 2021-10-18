@@ -45,7 +45,7 @@ export function NonceAccountSection({
         <tr>
           <td>Fee</td>
           <td className="text-lg-right">
-            {nonceAccount.info.feeCalculator.lamportsPerSignature} lamports per
+            {nonceAccount.info.feeCalculator.caratsPerSignature} carats per
             signature
           </td>
         </tr>

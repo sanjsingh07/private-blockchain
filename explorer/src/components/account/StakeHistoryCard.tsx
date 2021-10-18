@@ -1,5 +1,5 @@
 import React from "react";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import {
   SysvarAccount,
   StakeHistoryInfo,
@@ -28,9 +28,9 @@ export function StakeHistoryCard({
             <thead>
               <tr>
                 <th className="w-1 text-muted">Epoch</th>
-                <th className="text-muted">Effective (SOL)</th>
-                <th className="text-muted">Activating (SOL)</th>
-                <th className="text-muted">Deactivating (SOL)</th>
+                <th className="text-muted">Effective (GM)</th>
+                <th className="text-muted">Activating (GM)</th>
+                <th className="text-muted">Deactivating (GM)</th>
               </tr>
             </thead>
             <tbody className="list">
@@ -57,13 +57,13 @@ const renderAccountRow = (entry: StakeHistoryEntry, index: number) => {
     <tr key={index}>
       <td className="w-1 text-monospace">{entry.epoch}</td>
       <td className="text-monospace">
-        <SolBalance lamports={entry.stakeHistory.effective} />
+        <GemaBalance carats={entry.stakeHistory.effective} />
       </td>
       <td className="text-monospace">
-        <SolBalance lamports={entry.stakeHistory.activating} />
+        <GemaBalance carats={entry.stakeHistory.activating} />
       </td>
       <td className="text-monospace">
-        <SolBalance lamports={entry.stakeHistory.deactivating} />
+        <GemaBalance carats={entry.stakeHistory.deactivating} />
       </td>
     </tr>
   );

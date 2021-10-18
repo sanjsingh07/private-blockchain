@@ -82,7 +82,7 @@ export interface Details {
 
 export interface Account {
   pubkey: PublicKey;
-  lamports: number;
+  carats: number;
   details?: Details;
 }
 
@@ -136,11 +136,11 @@ async function fetchAccountInfo(
     const connection = new Connection(url, "confirmed");
     const result = (await connection.getParsedAccountInfo(pubkey)).value;
 
-    let lamports, details;
+    let carats, details;
     if (result === null) {
-      lamports = 0;
+      carats = 0;
     } else {
-      lamports = result.lamports;
+      carats = result.carats;
 
       // Only save data in memory if we can decode it
       let space: number;
@@ -246,7 +246,7 @@ async function fetchAccountInfo(
         data,
       };
     }
-    data = { pubkey, lamports, details };
+    data = { pubkey, carats, details };
     fetchStatus = FetchStatus.Fetched;
   } catch (error) {
     if (cluster !== Cluster.Custom) {

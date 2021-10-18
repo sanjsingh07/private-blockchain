@@ -840,7 +840,7 @@ impl fmt::Display for CliKeyedEpochRewards {
                 Some(reward) => {
                     writeln!(
                         f,
-                        "  {:<44}  ◎{:<17.9}  ◎{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
+                        "  {:<44}  GM{:<17.9}  GM{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
                         keyed_reward.address,
                         carats_to_gema(reward.amount),
                         carats_to_gema(reward.post_balance),
@@ -975,7 +975,7 @@ fn show_epoch_rewards(
         for reward in epoch_rewards {
             writeln!(
                 f,
-                "  {:<6}  {:<11}  ◎{:<17.9}  ◎{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
+                "  {:<6}  {:<11}  GM{:<17.9}  GM{:<17.9}  {:>13.9}%  {:>14}  {:>10}",
                 reward.epoch,
                 reward.effective_slot,
                 carats_to_gema(reward.amount),
@@ -2295,7 +2295,7 @@ impl fmt::Display for CliBlock {
                         "-".to_string()
                     },
                     format!(
-                        "{}◎{:<14.9}",
+                        "{}GM{:<14.9}",
                         sign,
                         carats_to_gema(reward.carats.abs() as u64)
                     ),
@@ -2303,7 +2303,7 @@ impl fmt::Display for CliBlock {
                         "          -                 -".to_string()
                     } else {
                         format!(
-                            "◎{:<19.9}  {:>13.9}%",
+                            "GM{:<19.9}  {:>13.9}%",
                             carats_to_gema(reward.post_balance),
                             (reward.carats.abs() as f64
                                 / (reward.post_balance as f64 - reward.carats as f64))
@@ -2320,7 +2320,7 @@ impl fmt::Display for CliBlock {
             let sign = if total_rewards < 0 { "-" } else { "" };
             writeln!(
                 f,
-                "Total Rewards: {}◎{:<12.9}",
+                "Total Rewards: {}GM{:<12.9}",
                 sign,
                 carats_to_gema(total_rewards.abs() as u64)
             )?;

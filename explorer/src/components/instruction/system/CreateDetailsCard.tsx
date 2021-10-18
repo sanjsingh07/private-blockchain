@@ -4,7 +4,7 @@ import {
   SignatureResult,
   ParsedInstruction,
 } from "@solana/web3.js";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import { InstructionCard } from "../InstructionCard";
 import { Address } from "components/common/Address";
 import { CreateAccountInfo } from "./types";
@@ -50,9 +50,9 @@ export function CreateDetailsCard(props: {
       </tr>
 
       <tr>
-        <td>Transfer Amount (SOL)</td>
+        <td>Transfer Amount (GM)</td>
         <td className="text-lg-right">
-          <SolBalance lamports={info.lamports} />
+          <GemaBalance carats={info.carats} />
         </td>
       </tr>
 

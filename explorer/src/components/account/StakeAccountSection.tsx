@@ -1,6 +1,6 @@
 import React from "react";
 import { TableCardBody } from "components/common/TableCardBody";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import { displayTimestampUtc } from "utils/date";
 import { Account, useFetchAccountInfo } from "providers/accounts";
 import { Address } from "components/common/Address";
@@ -123,15 +123,15 @@ function OverviewCard({
           </td>
         </tr>
         <tr>
-          <td>Balance (SOL)</td>
+          <td>Balance (GM)</td>
           <td className="text-lg-right text-uppercase">
-            <SolBalance lamports={account.lamports || 0} />
+            <GemaBalance carats={account.carats || 0} />
           </td>
         </tr>
         <tr>
-          <td>Rent Reserve (SOL)</td>
+          <td>Rent Reserve (GM)</td>
           <td className="text-lg-right">
-            <SolBalance lamports={stakeAccount.meta.rentExemptReserve} />
+            <GemaBalance carats={stakeAccount.meta.rentExemptReserve} />
           </td>
         </tr>
         {hideDelegation && (
@@ -188,25 +188,25 @@ function DelegationCard({
         {stake && (
           <>
             <tr>
-              <td>Delegated Stake (SOL)</td>
+              <td>Delegated Stake (GM)</td>
               <td className="text-lg-right">
-                <SolBalance lamports={stake.delegation.stake} />
+                <GemaBalance carats={stake.delegation.stake} />
               </td>
             </tr>
 
             {activation && (
               <>
                 <tr>
-                  <td>Active Stake (SOL)</td>
+                  <td>Active Stake (GM)</td>
                   <td className="text-lg-right">
-                    <SolBalance lamports={activation.active} />
+                    <GemaBalance carats={activation.active} />
                   </td>
                 </tr>
 
                 <tr>
-                  <td>Inactive Stake (SOL)</td>
+                  <td>Inactive Stake (GM)</td>
                   <td className="text-lg-right">
-                    <SolBalance lamports={activation.inactive} />
+                    <GemaBalance carats={activation.inactive} />
                   </td>
                 </tr>
               </>

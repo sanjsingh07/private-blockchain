@@ -4,7 +4,7 @@ import {
   StakeProgram,
   ParsedInstruction,
 } from "@solana/web3.js";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import { InstructionCard } from "../InstructionCard";
 import { Address } from "components/common/Address";
 import { SplitInfo } from "./types";
@@ -57,9 +57,9 @@ export function SplitDetailsCard(props: {
       </tr>
 
       <tr>
-        <td>Split Amount (SOL)</td>
+        <td>Split Amount (GM)</td>
         <td className="text-lg-right">
-          <SolBalance lamports={info.lamports} />
+          <GemaBalance carats={info.carats} />
         </td>
       </tr>
     </InstructionCard>

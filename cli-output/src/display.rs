@@ -283,7 +283,7 @@ pub fn write_transaction<W: io::Write>(
         )?;
         writeln!(
             w,
-            "{}  Fee: ◎{}",
+            "{}  Fee: GM{}",
             prefix,
             carats_to_gema(transaction_status.fee)
         )?;
@@ -300,7 +300,7 @@ pub fn write_transaction<W: io::Write>(
             if pre == post {
                 writeln!(
                     w,
-                    "{}  Account {} balance: ◎{}",
+                    "{}  Account {} balance: GM{}",
                     prefix,
                     i,
                     carats_to_gema(*pre)
@@ -308,7 +308,7 @@ pub fn write_transaction<W: io::Write>(
             } else {
                 writeln!(
                     w,
-                    "{}  Account {} balance: ◎{} -> ◎{}",
+                    "{}  Account {} balance: GM{} -> GM{}",
                     prefix,
                     i,
                     carats_to_gema(*pre),
@@ -347,11 +347,11 @@ pub fn write_transaction<W: io::Write>(
                             "-".to_string()
                         },
                         format!(
-                            "{}◎{:<14.9}",
+                            "{}GM{:<14.9}",
                             sign,
                             carats_to_gema(reward.carats.abs() as u64)
                         ),
-                        format!("◎{:<18.9}", carats_to_gema(reward.post_balance),)
+                        format!("GM{:<18.9}", carats_to_gema(reward.post_balance),)
                     )?;
                 }
             }

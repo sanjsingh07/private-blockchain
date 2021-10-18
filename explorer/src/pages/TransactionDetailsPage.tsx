@@ -13,7 +13,7 @@ import {
   SystemProgram,
   SystemInstruction,
 } from "@solana/web3.js";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import { ErrorCard } from "components/common/ErrorCard";
 import { LoadingCard } from "components/common/LoadingCard";
 import { TableCardBody } from "components/common/TableCardBody";
@@ -296,9 +296,9 @@ function StatusCard({
 
         {fee && (
           <tr>
-            <td>Fee (SOL)</td>
+            <td>Fee (GM)</td>
             <td className="text-lg-right">
-              <SolBalance lamports={fee} />
+              <GemaBalance carats={fee} />
             </td>
           </tr>
         )}
@@ -367,10 +367,10 @@ function AccountsCard({
           <Address pubkey={pubkey} link />
         </td>
         <td>
-          <BalanceDelta delta={delta} isSol />
+          <BalanceDelta delta={delta} isGema />
         </td>
         <td>
-          <SolBalance lamports={post} />
+          <GemaBalance carats={post} />
         </td>
         <td>
           {index === 0 && (
@@ -401,8 +401,8 @@ function AccountsCard({
             <tr>
               <th className="text-muted">#</th>
               <th className="text-muted">Address</th>
-              <th className="text-muted">Change (SOL)</th>
-              <th className="text-muted">Post Balance (SOL)</th>
+              <th className="text-muted">Change (GM)</th>
+              <th className="text-muted">Post Balance (GM)</th>
               <th className="text-muted">Details</th>
             </tr>
           </thead>

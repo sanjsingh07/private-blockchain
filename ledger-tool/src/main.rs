@@ -101,11 +101,11 @@ fn output_slot_rewards(blockstore: &Blockstore, slot: Slot, method: &LedgerOutpu
                             "-".to_string()
                         },
                         format!(
-                            "{}◎{:<14.9}",
+                            "{}GM{:<14.9}",
                             sign,
                             carats_to_gema(reward.carats.abs() as u64)
                         ),
-                        format!("◎{:<18.9}", carats_to_gema(reward.post_balance)),
+                        format!("GM{:<18.9}", carats_to_gema(reward.post_balance)),
                         reward
                             .commission
                             .map(|commission| format!("{:>9}%", commission))

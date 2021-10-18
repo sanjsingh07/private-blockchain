@@ -8,12 +8,12 @@ import {
 } from "providers/accounts";
 import { ClusterStatus, useCluster } from "providers/cluster";
 import { addressLabel } from "utils/tx";
-import { lamportsToSolString } from "utils";
+import { caratsToGemaString } from "utils";
 
 type AccountValidator = (account: Account) => string | undefined;
 
 export const createFeePayerValidator = (
-  feeLamports: number
+  feeCarats: number
 ): AccountValidator => {
   return (account: Account): string | undefined => {
     if (account.details === undefined) return "Account doesn't exist";
@@ -22,7 +22,7 @@ export const createFeePayerValidator = (
     // TODO: Actually nonce accounts can pay fees too
     if (account.details.space > 0)
       return "Only unallocated accounts can pay fees";
-    if (account.lamports < feeLamports) {
+    if (account.carats < feeCarats) {
       return "Insufficient funds for fees";
     }
     return;
@@ -94,7 +94,7 @@ function AccountInfo({
       {ownerAddress
         ? `Owned by ${
             ownerLabel || ownerAddress
-          }. Balance is ${lamportsToSolString(info.data.lamports)} SOL`
+          }. Balance is ${caratsToGemaString(info.data.carats)} GEMA`
         : "Account doesn't exist"}
     </span>
   );

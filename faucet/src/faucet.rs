@@ -68,10 +68,10 @@ pub enum FaucetError {
     #[error("transaction_length from faucet: 0")]
     NoDataReceived,
 
-    #[error("request too large; req: ◎{0}, cap: ◎{1}")]
+    #[error("request too large; req: GM{0}, cap: GM{1}")]
     PerRequestCapExceeded(f64, f64),
 
-    #[error("limit reached; req: ◎{0}, to: {1}, current: ◎{2}, cap: ◎{3}")]
+    #[error("limit reached; req: GM{0}, to: {1}, current: GM{2}, cap: GM{3}")]
     PerTimeCapExceeded(f64, String, f64, f64),
 }
 
@@ -643,7 +643,7 @@ mod tests {
 
             assert_eq!(message.instructions.len(), 1);
             let parsed_memo = std::str::from_utf8(&message.instructions[0].data).unwrap();
-            let expected_memo = "request too large; req: ◎0.000000002, cap: ◎0.000000001";
+            let expected_memo = "request too large; req: GM0.000000002, cap: GM0.000000001";
             assert_eq!(parsed_memo, expected_memo);
             assert_eq!(memo, expected_memo);
         } else {

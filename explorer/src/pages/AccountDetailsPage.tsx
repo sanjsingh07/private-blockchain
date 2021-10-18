@@ -119,7 +119,15 @@ export function AccountDetailsPage({ address, tab }: Props) {
   // Fetch account on load
   React.useEffect(() => {
     if (!info && status === ClusterStatus.Connected && pubkey) {
-      fetchAccount(pubkey);
+      // console.log("status ",status);
+      // console.log("address ", address);
+      // console.log("ClusterStatus.Connected: ",ClusterStatus.Connected);
+      // console.log("info: ",info);
+      // console.log("pubkey: ",pubkey);
+      // console.log("this is getting called");
+      
+      let detail = fetchAccount(pubkey);
+      console.log("details : ",detail);
     }
   }, [address, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -209,8 +217,9 @@ function DetailsSections({
     return <LoadingCard />;
   } else if (
     info.status === FetchStatus.FetchFailed ||
-    info.data?.lamports === undefined
+    info.data?.carats === undefined
   ) {
+      // console.log("printing smth: ",fetchAccount);
     return <ErrorCard retry={() => fetchAccount(pubkey)} text="Fetch Failed" />;
   }
 
@@ -230,7 +239,7 @@ function DetailsSections({
       {flaggedAccounts.has(address) && (
         <div className="alert alert-danger alert-scam" role="alert">
           Warning! This account has been flagged by the community as a scam
-          account. Please be cautious sending SOL to this account.
+          account. Please be cautious sending GEMA to this account.
         </div>
       )}
       {<InfoSection account={account} />}

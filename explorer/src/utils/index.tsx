@@ -6,7 +6,7 @@ import {
 } from "humanize-duration-ts";
 
 // Switch to web3 constant when web3 updates superstruct
-export const LAMPORTS_PER_SOL = 1000000000;
+export const CARATS_PER_GEMA = 1000000000;
 
 export const NUM_TICKS_PER_SECOND = 160;
 export const DEFAULT_TICKS_PER_SLOT = 64;
@@ -28,46 +28,46 @@ export function normalizeTokenAmount(
   return rawTokens / Math.pow(10, decimals);
 }
 
-export function lamportsToSol(lamports: number | BN): number {
-  if (typeof lamports === "number") {
-    return Math.abs(lamports) / LAMPORTS_PER_SOL;
+export function caratsToGema(carats: number | BN): number {
+  if (typeof carats === "number") {
+    return Math.abs(carats) / CARATS_PER_GEMA;
   }
 
   let signMultiplier = 1;
-  if (lamports.isNeg()) {
+  if (carats.isNeg()) {
     signMultiplier = -1;
   }
 
-  const absLamports = lamports.abs();
-  const lamportsString = absLamports.toString(10).padStart(10, "0");
-  const splitIndex = lamportsString.length - 9;
-  const solString =
-    lamportsString.slice(0, splitIndex) +
+  const absCarats = carats.abs();
+  const caratsString = absCarats.toString(10).padStart(10, "0");
+  const splitIndex = caratsString.length - 9;
+  const gemaString =
+    caratsString.slice(0, splitIndex) +
     "." +
-    lamportsString.slice(splitIndex);
-  return signMultiplier * parseFloat(solString);
+    caratsString.slice(splitIndex);
+  return signMultiplier * parseFloat(gemaString);
 }
 
-export function lamportsToSolString(
-  lamports: number | BN,
+export function caratsToGemaString(
+  carats: number | BN,
   maximumFractionDigits: number = 9
 ): string {
-  const sol = lamportsToSol(lamports);
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(sol);
+  const gema = caratsToGema(carats);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(gema);
 }
 
-export function SolBalance({
-  lamports,
+export function GemaBalance({
+  carats,
   maximumFractionDigits = 9,
 }: {
-  lamports: number | BN;
+  carats: number | BN;
   maximumFractionDigits?: number;
 }) {
   return (
     <span>
-      ◎
+      
       <span className="text-monospace">
-        {lamportsToSolString(lamports, maximumFractionDigits)}
+        {caratsToGemaString(carats, maximumFractionDigits)}
       </span>
     </span>
   );

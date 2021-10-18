@@ -1,5 +1,5 @@
 import React from "react";
-import { SolBalance } from "utils";
+import { GemaBalance } from "utils";
 import { BlockResponse, PublicKey } from "@solana/web3.js";
 import { Address } from "components/common/Address";
 
@@ -38,8 +38,8 @@ export function BlockRewardsCard({ block }: { block: BlockResponse }) {
               let percentChange;
               if (reward.postBalance !== null && reward.postBalance !== 0) {
                 percentChange = (
-                  (Math.abs(reward.lamports) /
-                    (reward.postBalance - reward.lamports)) *
+                  (Math.abs(reward.carats) /
+                    (reward.postBalance - reward.carats)) *
                   100
                 ).toFixed(9);
               }
@@ -50,11 +50,11 @@ export function BlockRewardsCard({ block }: { block: BlockResponse }) {
                   </td>
                   <td>{reward.rewardType}</td>
                   <td>
-                    <SolBalance lamports={reward.lamports} />
+                    <GemaBalance carats={reward.carats} />
                   </td>
                   <td>
                     {reward.postBalance ? (
-                      <SolBalance lamports={reward.postBalance} />
+                      <GemaBalance carats={reward.postBalance} />
                     ) : (
                       "-"
                     )}
